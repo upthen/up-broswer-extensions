@@ -1,0 +1,537 @@
+/* ============ 设计 token ============ */
+:root {
+  color-scheme: light;
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --surface-3: #eef1f4;
+  --border: #e3e7ec;
+  --border-2: #cfd6df;
+  --text: #101828;
+  --text-2: #5a6474;
+  --text-3: #8a94a3;
+
+  --accent: #3b62f6;
+  --accent-hover: #2c4fe0;
+  --accent-soft: #eaefff;
+  --accent-ink: #ffffff;
+
+  --ok: #0f7b52;
+  --ok-soft: #e6f6ee;
+  --warn: #a86400;
+  --warn-soft: #fff3dd;
+  --err: #d92d20;
+  --err-soft: #fdeceb;
+
+  --json-key: #1f5ed8;
+  --json-string: #0a7a4a;
+  --json-number: #b25000;
+  --json-atom: #7a3fd4;
+  --json-punct: #7b8494;
+
+  --line-hl: #f5f8ff;
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-2: 0 10px 30px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
+
+  --radius-sm: 7px;
+  --radius: 10px;
+  --radius-lg: 12px;
+
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Consolas, 'Microsoft YaHei Mono', monospace;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0e1116;
+  --surface: #14171d;
+  --surface-2: #181c23;
+  --surface-3: #1e232b;
+  --border: #252a33;
+  --border-2: #333a45;
+  --text: #e7eaf0;
+  --text-2: #a4adba;
+  --text-3: #6f7987;
+
+  --accent: #5b7cfa;
+  --accent-hover: #7191ff;
+  --accent-soft: #1b2340;
+
+  --ok: #3ecf8e;
+  --ok-soft: #12321f;
+  --warn: #e3a13a;
+  --warn-soft: #33270f;
+  --err: #ff6b6b;
+  --err-soft: #3a1618;
+
+  --json-key: #7aa7ff;
+  --json-string: #6fd39a;
+  --json-number: #ffb36b;
+  --json-atom: #c39bff;
+  --json-punct: #7d8797;
+
+  --line-hl: #191e26;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 16px 40px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ============ 基础 ============ */
+* {
+  box-sizing: border-box;
+}
+
+#app {
+  height: 100%;
+}
+
+/* 沉浸模式：隐藏顶栏，把空间全留给编辑器 */
+body.is-immersive .topbar {
+  display: none;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body[data-mode='popup'] {
+  width: 460px;
+  height: 578px;
+}
+
+body[data-mode='sidepanel'] {
+  min-width: 300px;
+  height: 100vh;
+}
+
+body[data-mode='full'] {
+  height: 100vh;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font-family: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* ============ 通用控件 ============ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.08s;
+}
+
+.btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border-2);
+  color: var(--text);
+}
+
+.btn:active {
+  transform: translateY(0.5px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 1px 2px rgba(59, 98, 246, 0.3);
+}
+
+.btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--accent-ink);
+}
+
+.btn--ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn--ghost:hover {
+  background: var(--surface-3);
+  border-color: transparent;
+}
+
+.btn--danger:hover {
+  color: var(--err);
+  border-color: var(--err);
+  background: var(--err-soft);
+}
+
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 暗色下按钮要与工具栏底色拉开层次 */
+[data-theme='dark'] .btn {
+  background: var(--surface-3);
+  border-color: var(--border-2);
+  color: var(--text-2);
+}
+
+[data-theme='dark'] .btn:hover {
+  background: #272d38;
+  border-color: #3d4552;
+  color: var(--text);
+}
+
+[data-theme='dark'] .btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+[data-theme='dark'] .btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+[data-theme='dark'] .btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+[data-theme='dark'] .btn--ghost:hover {
+  background: var(--surface-3);
+}
+
+.btn--icon {
+  padding: 0;
+  width: 30px;
+  justify-content: center;
+}
+
+.btn--sm {
+  height: 26px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+.select {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%),
+    linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+  background-position:
+    calc(100% - 12px) 13px,
+    calc(100% - 8px) 13px;
+  background-size:
+    4px 4px,
+    4px 4px;
+  background-repeat: no-repeat;
+  padding-right: 22px;
+}
+
+.select:hover {
+  border-color: var(--border-2);
+  color: var(--text);
+}
+
+.vsep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+  flex: none;
+}
+
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============ CodeMirror ============ */
+.cm-editor {
+  height: 100%;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--editor-font, 13px);
+}
+
+.cm-editor.cm-focused {
+  outline: none !important;
+}
+
+.cm-scroller {
+  font-family: var(--font-mono);
+  line-height: 1.62;
+  padding: 8px 0 14px;
+  overflow: auto;
+}
+
+.cm-content {
+  padding: 0 4px 0 2px;
+  caret-color: var(--accent);
+}
+
+.cm-line {
+  padding: 0 8px 0 6px;
+}
+
+.cm-gutters {
+  background: transparent !important;
+  border-right: 1px solid var(--border);
+  color: var(--text-3);
+  user-select: none;
+}
+
+.cm-lineNumbers .cm-gutterElement {
+  padding: 0 8px 0 12px;
+  font-size: 11.5px;
+  min-width: 26px;
+}
+
+/* CodeMirror 自带的 activeLine 是浅色主题的硬编码色，暗色下会亮成一块白条，这里全部接管 */
+.cm-editor .cm-activeLine {
+  background: transparent !important;
+}
+
+.cm-editor .cm-activeLineGutter {
+  background: transparent !important;
+  color: var(--text-3) !important;
+}
+
+.cm-editor.cm-focused .cm-activeLine {
+  background: var(--line-hl) !important;
+}
+
+.cm-editor.cm-focused .cm-activeLineGutter {
+  background: var(--accent-soft) !important;
+  color: var(--text-2) !important;
+}
+
+.cm-foldGutter .cm-gutterElement {
+  padding: 0 2px 0 4px;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.cm-foldGutter .cm-gutterElement:hover {
+  color: var(--accent);
+}
+
+.cm-cursor {
+  border-left: 2px solid var(--accent) !important;
+}
+
+.cm-selectionBackground,
+.cm-editor ::selection {
+  background: var(--accent-soft) !important;
+}
+
+.cm-editor.cm-focused .cm-selectionBackground {
+  background: color-mix(in srgb, var(--accent) 22%, transparent) !important;
+}
+
+.cm-errorLine {
+  background: var(--err-soft) !important;
+  box-shadow: inset 2px 0 0 var(--err);
+}
+
+.cm-matchingBracket {
+  background: var(--accent-soft) !important;
+  color: inherit !important;
+  outline: 1px solid var(--border-2);
+  border-radius: 2px;
+}
+
+.cm-placeholder {
+  color: var(--text-3);
+  font-style: normal;
+}
+
+.cm-foldPlaceholder {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin: 0 2px;
+  font-size: 11px;
+}
+
+/* 查找面板 */
+.cm-panels {
+  background: var(--surface-2) !important;
+  border-color: var(--border) !important;
+  color: var(--text-2) !important;
+  font-family: var(--font-ui);
+}
+
+.cm-panels.cm-panels-top {
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.cm-panel.cm-search {
+  padding: 6px 8px !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.cm-panel.cm-search br {
+  display: none;
+}
+
+.cm-panel.cm-search input,
+.cm-panel.cm-search button,
+.cm-panel.cm-search label {
+  font-family: var(--font-ui) !important;
+  font-size: 12px !important;
+}
+
+.cm-panel.cm-search .cm-textfield {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.cm-panel.cm-search .cm-textfield:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.cm-panel.cm-search .cm-button {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  background-image: none !important;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.cm-panel.cm-search .cm-button:hover {
+  border-color: var(--border-2);
+  color: var(--text);
+}
+
+.cm-panel.cm-search label {
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cm-panel.cm-search button[name='close'] {
+  color: var(--text-3);
+  background: transparent;
+  border-color: transparent;
+  font-size: 15px !important;
+  padding: 0 6px;
+}
+
+.cm-searchMatch {
+  background: color-mix(in srgb, var(--warn) 26%, transparent);
+  border-radius: 2px;
+}
+
+.cm-searchMatch-selected {
+  background: color-mix(in srgb, var(--warn) 55%, transparent);
+}
+
+.cm-selectionMatch {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.cm-tooltip {
+  border: 1px solid var(--border) !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-2);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}

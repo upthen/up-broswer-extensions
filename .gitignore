@@ -4,6 +4,7 @@ dist-*/
 *.zip
 *.crx
 *.pem
+.shots/
 .DS_Store
 Thumbs.db
 .vscode/*
