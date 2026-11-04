@@ -2,7 +2,8 @@ const FULL_PAGE = 'index.html'
 
 chrome.runtime.onInstalled.addListener(() => {
   // 不劫持点击图标（图标保留 popup），侧边栏通过浏览器侧栏入口或快捷键打开
-  chrome.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: false }).catch(() => {})
+  const behavior = chrome.sidePanel?.setPanelBehavior?.({ openPanelOnActionClick: false })
+  behavior?.catch(() => {})
 })
 
 chrome.commands?.onCommand.addListener(async (command, tab) => {
