@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const dist = resolve(root, 'dist')
 const html = readFileSync(resolve(dist, 'index.html'), 'utf8')
-const js = html.match(/src="([^"]+\.js)"/)?.[1]
+// 产物里可能有多个 <script src>（共享 chunk 会被单独注入），入口是 main-*
+const scripts = [...html.matchAll(/<script[^>]+src="([^"]+\.js)"/g)].map((m) => m[1])
+const js = scripts.find((s) => /main-/.test(s)) ?? scripts[scripts.length - 1]
 const css = html.match(/href="([^"]+\.css)"/)?.[1]
 
 const testScript = String.raw`

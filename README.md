@@ -36,20 +36,26 @@
 
 ```bash
 npm install
-npm run build      # 类型检查 + 构建到 dist/
+npm run build      # 类型检查 + 构建到 dist/，并生成根目录转发版 manifest
 ```
 
-> **注意：要选的是 `dist/` 子目录，不是项目根目录 `devbuddy/`。**
-> 项目根目录只有源码，没有 `manifest.json`；如果选了根目录，Chrome 会报「清单文件缺失或不可读取 / 无法加载清单」。
+构建完成后这两个目录**都能**加载：
+
+| 选哪个 | 说明 |
+|---|---|
+| **`D:\Personal\devbuddy\dist`** | 产物目录，最直接、加载最快（推荐） |
+| **`D:\Personal\devbuddy`** | 项目根目录，`manifest.json` 会转发到 `dist/` 下的真实入口 |
+
+根目录的 `manifest.json` 是**构建时自动生成**的（已 gitignore，不要手改），内容就是把 `popup.html` / `sidepanel.html` / `background.js` / `icons` 等路径统一加上 `dist/` 前缀。删掉 `dist` 后根目录会加载失败，重新 `npm run build` 即可恢复。根目录加载时 Chrome 会连 `node_modules` 一起扫描，首次加载略慢，功能完全一致。
 
 1. 打开 `chrome://extensions`（Edge 为 `edge://extensions`）
 2. 右上角打开「开发者模式」
-3. 点「加载已解压的扩展程序」，选择 **`D:\Personal\devbuddy\dist`**
+3. 点「加载已解压的扩展程序」，选择上面任一个目录
 4. 点扩展图标即用；侧边栏从浏览器的侧栏入口打开，或按 `Alt+Shift+K`
 
-`Alt+Shift+J` 直接在新标签页打开全屏版。
+`Alt+Shift+J` 直接在新标签页打开全屏版（两种加载方式都会正确跳到 `dist/index.html`）。
 
-后续改了代码：`npm run build` → 回到扩展页点刷新按钮（或直接点扩展图标前先刷新），不需要重新「加载」。
+后续改了代码：`npm run build` → 回到扩展页点刷新按钮，不需要重新「加载」。
 
 ## 开发
 
@@ -75,8 +81,10 @@ src/
 │  ├─ components/EdPane.vue   CodeMirror 6 封装（受控、错误行标注、只读）
 │  └─ styles/base.css         设计 token（亮/暗）+ CodeMirror 主题
 ├─ background/         右键/命令入口、侧边栏唤起
-└─ shared/             chrome.storage 封装（普通网页自动退回 localStorage）
+└─ shared/             chrome.storage 封装（普通网页自动退回 localStorage）、pageUrl（兼容两种加载位置）
 ```
+
+入口地址不写死：`pageUrl()` 读 `manifest.action.default_popup` 推断前缀，所以「加载 `dist/`」与「加载根目录」两种方式下，弹窗、全屏页、侧边栏都能各自找对文件。
 
 设计上刻意把「引擎」和「界面」切开：`core` 里全是 `string → string | Result` 的纯函数，
 将来要搬去做 CLI 或网站，直接复用，不用重写逻辑。

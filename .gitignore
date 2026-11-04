@@ -1,6 +1,8 @@
 node_modules/
 dist/
 dist-*/
+# 根目录 manifest 由构建生成（转发到 dist/），不要提交
+/manifest.json
 *.zip
 *.crx
 *.pem

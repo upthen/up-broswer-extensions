@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import JsonTool from './pages/JsonTool.vue'
 import Icon from './components/Icon.vue'
 import { useSettings } from './composables/useSettings'
+import { pageUrl } from '../shared/urls'
 
 const props = withDefaults(defineProps<{ mode?: 'full' | 'popup' | 'sidepanel' }>(), { mode: 'full' })
 
@@ -17,7 +18,7 @@ const themeIcon = computed(() => {
 })
 
 function openFull() {
-  const url = typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('index.html') : 'index.html'
+  const url = pageUrl('index.html')
   if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
     void chrome.tabs.create({ url })
     window.close()
