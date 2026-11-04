@@ -39,12 +39,17 @@ npm install
 npm run build      # 类型检查 + 构建到 dist/
 ```
 
+> **注意：要选的是 `dist/` 子目录，不是项目根目录 `devbuddy/`。**
+> 项目根目录只有源码，没有 `manifest.json`；如果选了根目录，Chrome 会报「清单文件缺失或不可读取 / 无法加载清单」。
+
 1. 打开 `chrome://extensions`（Edge 为 `edge://extensions`）
 2. 右上角打开「开发者模式」
-3. 点「加载已解压的扩展程序」，选择本项目的 `dist/` 目录
+3. 点「加载已解压的扩展程序」，选择 **`D:\Personal\devbuddy\dist`**
 4. 点扩展图标即用；侧边栏从浏览器的侧栏入口打开，或按 `Alt+Shift+K`
 
 `Alt+Shift+J` 直接在新标签页打开全屏版。
+
+后续改了代码：`npm run build` → 回到扩展页点刷新按钮（或直接点扩展图标前先刷新），不需要重新「加载」。
 
 ## 开发
 
