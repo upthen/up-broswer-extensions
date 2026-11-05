@@ -21,9 +21,10 @@ import { loadValue, removeValue, saveValue } from '@/shared/storage'
 import { VIEWS } from '@/shared/views'
 import type { ViewMode } from '@/shared/views'
 
-const props = withDefaults(defineProps<{ compact?: boolean; mode?: string }>(), {
+const props = withDefaults(defineProps<{ compact?: boolean; mode?: string; active?: boolean }>(), {
   compact: false,
   mode: 'full',
+  active: true,
 })
 
 /** 输出区视图由外壳 App 用 v-model:view 共享，顶栏 tab 与面板内 tab 都能切换 */
@@ -446,6 +447,7 @@ function timeOf(time: number) {
 
 /* ---------------- 全局快捷键 ---------------- */
 function onKeydown(event: KeyboardEvent) {
+  if (!props.active) return
   if (event.key === 'Escape') {
     if (historyOpen.value) {
       historyOpen.value = false
@@ -495,6 +497,25 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
   document.removeEventListener('click', onClickOutside)
   document.body.classList.remove('is-immersive')
+})
+
+/** 切到别的模块时退出沉浸模式（顶栏是全局共享的） */
+watch(
+  () => props.active,
+  (isActive) => {
+    if (!isActive && immersive.value) {
+      immersive.value = false
+      document.body.classList.remove('is-immersive')
+    }
+  },
+)
+
+defineExpose({
+  /** 从隐藏状态恢复显示后让 CodeMirror 重新测量尺寸 */
+  refresh: () => {
+    inputPane.value?.refresh()
+    outputPane.value?.refresh()
+  },
 })
 </script>
 

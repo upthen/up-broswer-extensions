@@ -13,8 +13,10 @@
     "test:watch": "vitest",
     "smoke": "node scripts/smoke.mjs",
     "smoke:views": "node scripts/smoke-views.mjs",
-    "smoke:all": "node scripts/smoke.mjs && node scripts/smoke-views.mjs",
+    "smoke:encoding": "node scripts/smoke-encoding.mjs",
+    "smoke:all": "node scripts/smoke.mjs && node scripts/smoke-views.mjs && node scripts/smoke-encoding.mjs",
     "shot:views": "node scripts/shot-views.mjs",
+    "shot:encoding": "node scripts/shot-encoding.mjs",
     "icons": "node scripts/make-icons.mjs",
     "typecheck": "vue-tsc --noEmit"
   },

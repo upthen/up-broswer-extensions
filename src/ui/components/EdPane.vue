@@ -198,6 +198,8 @@ watch(
 
 defineExpose({
   focus: () => view.value?.focus(),
+  /** 从 display:none 恢复显示后，让 CodeMirror 重新测量布局 */
+  refresh: () => view.value?.requestMeasure(),
   gotoLine: (line: number) => {
     const instance = view.value
     if (!instance) return

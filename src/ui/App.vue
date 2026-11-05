@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import JsonTool from './pages/JsonTool.vue'
+import EncodingTool from './pages/EncodingTool.vue'
 import Icon from './components/Icon.vue'
 import { useSettings } from './composables/useSettings'
 import { pageUrl } from '../shared/urls'
@@ -13,7 +14,34 @@ const { settings, resolved, cycleTheme, themeLabel } = useSettings()
 const settingsOpen = ref(false)
 const view = ref<ViewMode>('text')
 
+type AppModule = 'json' | 'encoding'
+const initialModule: AppModule =
+  typeof location !== 'undefined' && new URLSearchParams(location.search).get('module') === 'encoding'
+    ? 'encoding'
+    : 'json'
+const module = ref<AppModule>(initialModule)
+const jsonTool = ref<InstanceType<typeof JsonTool> | null>(null)
+
 const compact = computed(() => props.mode !== 'full')
+
+function setModule(next: AppModule) {
+  module.value = next
+  settingsOpen.value = false
+}
+
+function openJson(nextView: ViewMode) {
+  view.value = nextView
+  setModule('json')
+}
+
+function toggleModule() {
+  setModule(module.value === 'json' ? 'encoding' : 'json')
+}
+
+// CodeMirror 在 display:none 期间尺寸为 0，恢复显示后需要重新测量
+watch(module, (next) => {
+  if (next === 'json') void nextTick(() => jsonTool.value?.refresh())
+})
 
 const themeIcon = computed(() => {
   if (settings.theme === 'system') return 'monitor'
@@ -21,7 +49,7 @@ const themeIcon = computed(() => {
 })
 
 function openFull() {
-  const url = pageUrl('index.html')
+  const url = pageUrl('index.html') + (module.value === 'encoding' ? '?module=encoding' : '')
   if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
     void chrome.tabs.create({ url })
     window.close()
@@ -38,8 +66,8 @@ function openFull() {
         <span class="logo"><Icon name="braces" :size="15" :stroke="2" /></span>
         <span class="brand__text">
           <span class="brand__name">研发好朋友</span>
-          <span v-if="!compact" class="brand__sub">DevBuddy · JSON 工具</span>
-          <span v-else class="brand__sub">JSON</span>
+          <span v-if="!compact" class="brand__sub">DevBuddy · {{ module === 'json' ? 'JSON 工具' : '编码转换' }}</span>
+          <span v-else class="brand__sub">{{ module === 'json' ? 'JSON' : '编码' }}</span>
         </span>
       </div>
 
@@ -48,13 +76,21 @@ function openFull() {
           v-for="item in VIEWS"
           :key="item.id"
           class="tab"
-          :class="{ 'tab--active': view === item.id }"
+          :class="{ 'tab--active': module === 'json' && view === item.id }"
           :title="`切换到${item.label}`"
-          @click="view = item.id"
+          @click="openJson(item.id)"
         >
           {{ item.label }}
         </button>
-        <button class="tab" disabled title="后续版本加入">编码转换</button>
+        <span class="tabsep" />
+        <button
+          class="tab tab--module"
+          :class="{ 'tab--active': module === 'encoding' }"
+          title="切换到编码转换（Base64 / URL / Unicode / HTML 实体 / JWT）"
+          @click="setModule('encoding')"
+        >
+          编码转换
+        </button>
       </nav>
 
       <span class="spacer" />
@@ -67,16 +103,30 @@ function openFull() {
       <button class="btn btn--icon btn--ghost" :title="`主题：${themeLabel()}`" @click="cycleTheme">
         <Icon :name="themeIcon" />
       </button>
-      <button v-if="mode !== 'full'" class="btn btn--sm btn--ghost" title="在新标签页打开" @click="openFull">
+      <button
+        v-if="mode !== 'full'"
+        class="btn btn--sm btn--ghost btn--module"
+        :title="module === 'json' ? '切换到编码转换' : '切换到 JSON 工具'"
+        @click="toggleModule"
+      >
+        <Icon :name="module === 'json' ? 'layers' : 'braces'" :size="13" />
+        <span class="btn__label">{{ module === 'json' ? '编码' : 'JSON' }}</span>
+      </button>
+      <button v-if="mode !== 'full'" class="btn btn--sm btn--ghost btn--openfull" title="在新标签页打开" @click="openFull">
         <Icon name="external" :size="13" />
-        全屏
+        <span class="btn__label">全屏</span>
       </button>
       <button class="btn btn--icon btn--ghost" title="设置" @click="settingsOpen = !settingsOpen">
         <Icon name="sliders" />
       </button>
     </header>
 
-    <JsonTool v-model:view="view" :compact="compact" :mode="mode" />
+    <div v-show="module === 'json'" class="app__module">
+      <JsonTool ref="jsonTool" v-model:view="view" :compact="compact" :mode="mode" :active="module === 'json'" />
+    </div>
+    <div v-show="module === 'encoding'" class="app__module">
+      <EncodingTool :compact="compact" :mode="mode" :active="module === 'encoding'" />
+    </div>
 
     <transition name="fade">
       <div v-if="settingsOpen" class="mask" @click="settingsOpen = false">
@@ -127,6 +177,14 @@ function openFull() {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.app__module {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
 }
@@ -223,6 +281,33 @@ function openFull() {
   color: var(--text-3);
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.tab--module {
+  font-weight: 600;
+}
+
+.tabsep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--border-2);
+  flex: none;
+}
+
+/* 340px 侧边栏：顶栏放不下文字，两个次要按钮收成纯图标 */
+@media (max-width: 400px) {
+  .btn--module .btn__label,
+  .btn--openfull .btn__label {
+    display: none;
+  }
+
+  .btn--module,
+  .btn--openfull {
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
 }
 
 .spacer {

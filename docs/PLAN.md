@@ -8,7 +8,7 @@
 | M1 骨架 | ✅ 完成 | MV3 manifest、Vite 多入口（弹窗/全屏/侧边栏/background）、设计 token、storage 封装、图标 |
 | M2 引擎 | ✅ 完成 | `core/json` 全套；44 个 Vitest 用例全绿（解析/错误定位/格式化/压缩/排序/转义/修复/统计） |
 | M3 编辑器 | ✅ 完成 | 原站 A1–A15 全部可交互；UI 冒烟测试 16 项全绿（`npm run smoke`） |
-| M4 增强 | 🟡 第一批完成 | B1 树形视图、B2 JSONPath、B3 代码生成已交付；B4 格式互转、B5 Diff、B6 时间戳、B8 编码工具待下一批 |
+| M4 增强 | 🟡 前两批完成 | 第一批 B1 树形视图 / B2 JSONPath / B3 代码生成；第二批 B8 编码转换（五个工具）已交付。剩余 B4 格式互转、B5 Diff、B6 时间戳、B7 页面取词、B9 Mock、B11 多语言 |
 | M5 打磨 | 🟡 部分 | 历史记录、主题、字号、快捷键已完成；多语言、Worker 大文件优化待做 |
 | M6 发布 | ⏳ 未开始 | 商店素材、隐私说明、打包分发 |
 
@@ -19,6 +19,8 @@
 - 背景脚本只保留命令与侧边栏唤起逻辑，`permissions` 仍仅 `storage` + `sidePanel`，无 host 权限；第二阶段也未新增任何权限。
 - M4 的 JSONPath 没有引入第三方库：MV3 的 CSP 禁止 `eval` / `new Function`，过滤表达式用递归下降解释器求值，因此也是零依赖、可单测。
 - 代码生成按「先推断结构、再按语言渲染」拆两层，TS/Go/Java/Python/Rust 共用同一份 Schema，新增语言只需写一个 emit 分支。
+- B8 的五个工具全部手写字节级实现，不用 `btoa`/`atob`（Latin-1 限制）、不用 DOM 解析 HTML 实体、不用第三方 JWT 库；MV3 零依赖、可单测，JWT 明确标注「不校验签名」。
+- 编码转换做成顶栏第二个「模块」而非输出区第五个视图：两组工具的输入域完全不同，`v-show` 常驻 + `requestMeasure` 保证切换后 CodeMirror 布局正常且输入不丢；紧凑模式用纯图标按钮切换模块。
 
 ### M4 第一批验收记录（2026-11-05）
 
@@ -31,7 +33,19 @@
 | 视觉校验 | 亮/暗、1280 全屏与 340 侧边栏截图确认无溢出，见 `docs/screenshots/` |
 | 扩展加载 | 两种目录加载方式均通过 CDP `Extensions.loadUnpacked` 实测，弹窗/全屏页/侧边栏正常渲染 |
 
-下一批建议顺序：B8 编码工具（Base64/URL/JWT，纯本地、性价比最高）→ B4 格式互转 → B5 Diff。
+### M4 第二批验收记录（2026-11-05，B8 编码转换）
+
+| 项 | 结果 |
+|---|---|
+| `npm test` | **133 个用例全绿**（json 44 / query 17 / codegen 18 / encoding 54） |
+| `npm run smoke:encoding` | **39 项断言全绿**（五工具往返、方向/选项切换、错误提示、JWT 结构化、模块切换不丢输入、340px 紧凑模式） |
+| `npm run smoke` + `smoke:views` | 16 + 15 项全绿，A 组与第一批增强无回归 |
+| `npm run typecheck` | 零错误 |
+| 视觉校验 | 亮/暗、1280 全屏 / 460 弹窗 / 340 侧边栏截图确认无溢出；紧凑模式用 iframe 精确锁定宽度复拍 |
+| 扩展加载 | 根目录与 `dist/` 两种加载方式均通过 CDP 实测：三入口模块切换正常，JWT 卡片 2 张、声明 9 行、不验签提示存在 |
+| 权限 | 仍为 `storage` + `sidePanel`，`host_permissions: []`，零网络请求 |
+
+下一批建议顺序：B4 格式互转（JSON↔YAML/XML/CSV）→ B5 JSON Diff → B6 时间戳识别。
 
 ## 1. 项目定位
 

@@ -1,7 +1,7 @@
 # 研发好朋友 · DevBuddy
 
 离线可用的开发者工具箱浏览器扩展（Chrome / Edge，Manifest V3）。
-第一个模块 1:1 复刻了 [锤子在线工具 - JSON 格式化](https://www.toolhelper.cn/JSON/JSONFormat)，并在原站基础上补齐了错误定位、历史记录、暗色主题与三套入口。
+第一个模块 1:1 复刻了 [锤子在线工具 - JSON 格式化](https://www.toolhelper.cn/JSON/JSONFormat)，并在原站基础上补齐了错误定位、历史记录、暗色主题与三套入口；第二个模块是纯本地的编码转换（Base64 / URL / Unicode / HTML 实体 / JWT）。顶栏可在两个模块间切换，各自的输入互不干扰。
 
 **核心原则：数据不出本机。** 不联网、不上传、不登录，`host_permissions` 为空，所有解析/格式化/修复都在本地完成。
 
@@ -34,6 +34,19 @@
 ![JSONPath 查询](docs/screenshots/query.png)
 
 ![代码生成](docs/screenshots/codegen.png)
+
+**编码转换（第二阶段第二批 · B8）**
+
+- **Base64 / Base64URL**：UTF-8 与 Latin-1 双字符集、URL-safe 字母表、去填充、按 64/76/100 字符折行、严格校验；解码自动识别折行、`data:` URI 前缀与 BOM，非 UTF-8 字节降级 Latin-1 并给出警告
+- **URL 编码**：组件 / 完整 URL / 表单（空格 → `+`）/ 路径四种模式，严格 RFC 3986、按行批量；非法 `%` 转义报出具体位置
+- **Unicode 转义**：`\uXXXX` / `\u{…}` / `\xNN` 三种风格，自动拆分与合并 emoji 代理对，支持 `\n \t \\` 等短转义、大小写与「仅非 ASCII」
+- **HTML 实体**：命名实体 + 十进制/十六进制数字实体，按 HTML5 规则处理 Windows-1252 区段与越界码点，编码强度三档
+- **JWT 解码**：Header / Payload 卡片带语法着色，标准声明中文化并换算本地时间、UTC 与剩余时长，判定生效/过期；**只解码内容，不校验签名**（界面显著提示，需密钥与服务端才能验签）
+- 五类工具均实时转换，支持方向切换、示例、粘贴、复制、下载、结果放回输入（`Ctrl+Enter`）；切换工具会保留用户输入
+
+![编码转换](docs/screenshots/encoding-base64.png)
+
+![JWT 解码](docs/screenshots/encoding-jwt.png)
 
 **额外增强**
 
@@ -73,16 +86,18 @@ npm run build      # 类型检查 + 构建到 dist/，并生成根目录转发�
 ## 开发
 
 ```bash
-npm run dev           # 监听构建，产物仍在 dist/（改动后到扩展页点刷新）
-npm test              # 核心引擎单元测试（79 个用例）
-npm run smoke         # 主流程 UI 冒烟（16 项断言）
-npm run smoke:views   # 增强视图 UI 冒烟（15 项断言）
-npm run smoke:all     # 两套冒烟一起跑
-npm run shot:views    # 生成各视图截图到 .shots/（视觉回归用）
+npm run dev              # 监听构建，产物仍在 dist/（改动后到扩展页点刷新）
+npm test                 # 核心引擎单元测试（133 个用例）
+npm run smoke            # 主流程 UI 冒烟（16 项断言）
+npm run smoke:views      # 增强视图 UI 冒烟（15 项断言）
+npm run smoke:encoding   # 编码工具 UI 冒烟（39 项断言，含 340px 紧凑模式）
+npm run smoke:all        # 三套冒烟一起跑
+npm run shot:views       # 生成 JSON 视图截图到 .shots/
+npm run shot:encoding    # 生成编码模块亮/暗与三入口截图
 npm run typecheck
 ```
 
-`tests/` 下按模块拆：`json.test.ts` 解析器与格式化、`query.test.ts` JSONPath、`codegen.test.ts` 类型推断与五语言输出。`core/` 全是纯函数，不依赖 DOM 与 chrome API。
+`tests/` 下按模块拆：`json.test.ts` 解析器与格式化、`query.test.ts` JSONPath、`codegen.test.ts` 类型推断与五语言输出、`encoding.test.ts` 五类编解码与 JWT 时间判定（54 个用例）。`core/` 全是纯函数，不依赖 DOM 与 chrome API。
 
 ## 结构
 
@@ -97,12 +112,21 @@ src/
 │  └─ value.ts         AST → 普通 JS 值（树/查询/代码生成共用）
 ├─ core/query/jsonpath.ts  自研 JSONPath：选择器 + 过滤表达式递归下降，不用 eval
 ├─ core/codegen/       infer.ts 结构推断 + emit.ts 五语言渲染
+├─ core/encoding/      B8 编码引擎（纯函数）
+│  ├─ base64.ts        字节级编解码、URL-safe、data URI、UTF-8 校验
+│  ├─ url.ts           四种 URL 模式 + 按行批量 + 中文错误定位
+│  ├─ unicode.ts       \uXXXX / \u{…} / \xNN 与代理对
+│  ├─ html.ts          命名 / 数字实体，不依赖 DOM
+│  ├─ jwt.ts           三段解码、声明中文化与有效期判定（不验签）
+│  └─ index.ts         工具元数据 + runEncoding 统一分发
 ├─ ui/                 Vue 3 视图层，只做「薄壳」
-│  ├─ pages/JsonTool.vue          主页面与全部动作编排
+│  ├─ pages/JsonTool.vue          JSON 主页面与全部动作编排
+│  ├─ pages/EncodingTool.vue      编码转换页面（五工具、方向、动态选项）
 │  ├─ components/EdPane.vue       CodeMirror 6 封装（受控、错误行标注、按字符定位）
 │  ├─ components/TreeView.vue     树形视图
 │  ├─ components/QueryPanel.vue   JSONPath 查询
 │  ├─ components/CodegenPanel.vue 代码生成
+│  ├─ components/JwtResult.vue    JWT 三段结构化展示
 │  └─ styles/base.css             设计 token（亮/暗）+ CodeMirror 主题
 ├─ background/         右键/命令入口、侧边栏唤起
 └─ shared/             chrome.storage 封装、pageUrl（兼容两种加载位置）、views（视图定义）
@@ -117,10 +141,15 @@ src/
 
 - 不做登录、云同步、分享链接；扩展不发起任何网络请求。
 - 不做 AI 能力；如需，可后续加「自带 Key（BYOK）」入口，默认关闭。
-- 第二阶段尚未覆盖：JSON↔YAML/XML/CSV、JSON Diff、时间戳识别、Base64/URL/JWT 编码工具，排在下一批。
+- 编码转换里的 JWT **只解码、不验签**；验证签名需要密钥与服务端，本扩展刻意不碰。
+- 第二阶段尚未覆盖：JSON↔YAML/XML/CSV/TOML、JSON Diff、时间戳识别、页面取词、Mock 生成、多语言界面，排在后续批次。
 - 系统级全局快捷键、读写任意磁盘路径、托盘常驻等需本地原生程序，扩展做不了。
 
 功能可行性矩阵（可做 / 需服务端 / 做不了 / 可能收费）见 [docs/FEATURES.md](docs/FEATURES.md)，
 任务拆解与里程碑见 [docs/PLAN.md](docs/PLAN.md)。
 
 ![弹窗与侧边栏](docs/screenshots/compact.png)
+
+![暗色编码工具](docs/screenshots/encoding-dark.png)
+
+![侧边栏 JWT](docs/screenshots/encoding-sidepanel.png)
