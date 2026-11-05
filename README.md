@@ -22,6 +22,19 @@
 - 查找 `Ctrl+F`、常驻查找 `Alt+F`（Enter 下一个，Shift+Enter 上一个）
 - 实时统计：行数、字符、字节、节点数、层级深度
 
+**第二阶段增强（输出区四个视图，顶栏可直接切换）**
+
+- **树形视图**：按 AST 渲染，可逐层折叠/展开全部、按字段名或值筛选、类型徽标（对象/数组/字符串/数字/布尔/null）、复制规范化 JSONPath、点击「定位」跳回输入源码对应字符
+- **JSONPath 查询**：零依赖自研引擎（MV3 禁 eval），支持 `$.a.b` / `$..title` / `[*]` / `[0,-1]` / `[1:5:2]` / `[0,'k']` / `[?(@.price < 10 && @.isbn)]` / `=~ /^A/`，括号分组与 `&& || !`；中文语法错误 + 位置提示，结果可复制或放回输入
+- **代码生成**：从值反推结构（数组内对象合并、缺失字段可选、null 联合），生成 TypeScript / Go / Java / Python / Rust 五种定义；可改根名、缩进、导出、可选字段、`omitempty`、null 处理，支持复制与下载
+- 三个视图共用同一份输入，切换不丢数据；顶栏 tab 与输出区 tab 双向联动，弹窗/侧边栏同样可用
+
+![树形视图](docs/screenshots/tree.png)
+
+![JSONPath 查询](docs/screenshots/query.png)
+
+![代码生成](docs/screenshots/codegen.png)
+
 **额外增强**
 
 - 错误横幅：中文报错 + 提示 + 「定位到错误」/「尝试修复」两个按钮
@@ -60,11 +73,16 @@ npm run build      # 类型检查 + 构建到 dist/，并生成根目录转发�
 ## 开发
 
 ```bash
-npm run dev        # 监听构建，产物仍在 dist/（改动后到扩展页点刷新）
-npm test           # 核心引擎单元测试（44 个用例）
-npm run smoke      # 无头浏览器 UI 冒烟测试（模拟粘贴 + 点按钮，16 项断言）
+npm run dev           # 监听构建，产物仍在 dist/（改动后到扩展页点刷新）
+npm test              # 核心引擎单元测试（79 个用例）
+npm run smoke         # 主流程 UI 冒烟（16 项断言）
+npm run smoke:views   # 增强视图 UI 冒烟（15 项断言）
+npm run smoke:all     # 两套冒烟一起跑
+npm run shot:views    # 生成各视图截图到 .shots/（视觉回归用）
 npm run typecheck
 ```
+
+`tests/` 下按模块拆：`json.test.ts` 解析器与格式化、`query.test.ts` JSONPath、`codegen.test.ts` 类型推断与五语言输出。`core/` 全是纯函数，不依赖 DOM 与 chrome API。
 
 ## 结构
 
@@ -75,13 +93,19 @@ src/
 │  ├─ serialize.ts     序列化 / 缩进 / 压缩 / 键排序
 │  ├─ repair.ts        容错修复流水线（逐类计数，可解释）
 │  ├─ escape.ts        转义 / 反转义
-│  └─ stat.ts          节点数 / 深度 / 类型分布
+│  ├─ stat.ts          节点数 / 深度 / 类型分布
+│  └─ value.ts         AST → 普通 JS 值（树/查询/代码生成共用）
+├─ core/query/jsonpath.ts  自研 JSONPath：选择器 + 过滤表达式递归下降，不用 eval
+├─ core/codegen/       infer.ts 结构推断 + emit.ts 五语言渲染
 ├─ ui/                 Vue 3 视图层，只做「薄壳」
-│  ├─ pages/JsonTool.vue      主页面与全部动作编排
-│  ├─ components/EdPane.vue   CodeMirror 6 封装（受控、错误行标注、只读）
-│  └─ styles/base.css         设计 token（亮/暗）+ CodeMirror 主题
+│  ├─ pages/JsonTool.vue          主页面与全部动作编排
+│  ├─ components/EdPane.vue       CodeMirror 6 封装（受控、错误行标注、按字符定位）
+│  ├─ components/TreeView.vue     树形视图
+│  ├─ components/QueryPanel.vue   JSONPath 查询
+│  ├─ components/CodegenPanel.vue 代码生成
+│  └─ styles/base.css             设计 token（亮/暗）+ CodeMirror 主题
 ├─ background/         右键/命令入口、侧边栏唤起
-└─ shared/             chrome.storage 封装（普通网页自动退回 localStorage）、pageUrl（兼容两种加载位置）
+└─ shared/             chrome.storage 封装、pageUrl（兼容两种加载位置）、views（视图定义）
 ```
 
 入口地址不写死：`pageUrl()` 读 `manifest.action.default_popup` 推断前缀，所以「加载 `dist/`」与「加载根目录」两种方式下，弹窗、全屏页、侧边栏都能各自找对文件。
@@ -93,6 +117,7 @@ src/
 
 - 不做登录、云同步、分享链接；扩展不发起任何网络请求。
 - 不做 AI 能力；如需，可后续加「自带 Key（BYOK）」入口，默认关闭。
+- 第二阶段尚未覆盖：JSON↔YAML/XML/CSV、JSON Diff、时间戳识别、Base64/URL/JWT 编码工具，排在下一批。
 - 系统级全局快捷键、读写任意磁盘路径、托盘常驻等需本地原生程序，扩展做不了。
 
 功能可行性矩阵（可做 / 需服务端 / 做不了 / 可能收费）见 [docs/FEATURES.md](docs/FEATURES.md)，

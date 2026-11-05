@@ -15,6 +15,8 @@
 
 **v1 产品边界：0 后端、0 服务器、0 注册、0 费用、离线可用。**
 
+> **第二阶段进度（M4 第一批）**：B1 树形视图、B2 JSONPath、B3 代码生成已实现，且代码生成扩展到 5 种语言。三者全部纯本地、零权限、零网络，详见 README。B4 / B5 / B6 / B8 仍未开始。
+
 ---
 
 ## A. 纯浏览器可做 —— 复刻原站（P0，v1 必做）
@@ -41,9 +43,9 @@
 
 | # | 功能 | 说明 | 难度 |
 | --- | --- | --- | --- |
-| B1 | 树形视图 | 可折叠节点、类型徽标、数组索引、复制 JSONPath、点击定位源码 | 中 |
-| B2 | JSONPath / jq 查询 | 输入表达式出结果；支持过滤、通配、递归下降 | 中 |
-| B3 | 代码生成 | JSON → TypeScript interface / Go struct / Java class / Python dataclass / Rust serde，可选根名、`omitempty`、字段可空 | 中 |
+| B1 ✅ | 树形视图 | 可折叠节点、类型徽标、数组索引、复制 JSONPath、点击定位源码；已额外支持字段筛选 | 中 |
+| B2 ✅ | JSONPath / jq 查询 | 输入表达式出结果；支持过滤、通配、递归下降、切片、联合、正则、中文错误定位 | 中 |
+| B3 ✅ | 代码生成 | JSON → TypeScript interface / Go struct / Java class / Python dataclass / Rust serde，可选根名、`omitempty`、字段可空、缩进 | 中 |
 | B4 | 格式互转 | JSON ↔ YAML / XML / CSV / TOML（均客户端；有损方向给出明确提示） | 中 |
 | B5 | JSON Diff | 左右并排对比，按路径高亮增/删/改，可「只比结构」「忽略键序」「忽略大小写」 | 中高 |
 | B6 | 时间戳增强 | 识别 10/13 位时间戳与 ISO 串，悬浮显示本地时区/UTC 时间，可批量把指定字段转成可读时间 | 中 |

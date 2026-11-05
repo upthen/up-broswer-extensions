@@ -208,6 +208,14 @@ defineExpose({
     })
     instance.focus()
   },
+  /** 树形视图点「定位源码」时按字符下标跳转 */
+  gotoPos: (pos: number) => {
+    const instance = view.value
+    if (!instance) return
+    const offset = Math.min(Math.max(0, pos), instance.state.doc.length)
+    instance.dispatch({ selection: { anchor: offset }, scrollIntoView: true })
+    instance.focus()
+  },
   fold: () => {
     if (view.value) foldAll(view.value)
   },

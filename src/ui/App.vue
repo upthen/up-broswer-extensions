@@ -4,11 +4,14 @@ import JsonTool from './pages/JsonTool.vue'
 import Icon from './components/Icon.vue'
 import { useSettings } from './composables/useSettings'
 import { pageUrl } from '../shared/urls'
+import { VIEWS } from '../shared/views'
+import type { ViewMode } from '../shared/views'
 
 const props = withDefaults(defineProps<{ mode?: 'full' | 'popup' | 'sidepanel' }>(), { mode: 'full' })
 
 const { settings, resolved, cycleTheme, themeLabel } = useSettings()
 const settingsOpen = ref(false)
+const view = ref<ViewMode>('text')
 
 const compact = computed(() => props.mode !== 'full')
 
@@ -41,9 +44,17 @@ function openFull() {
       </div>
 
       <nav v-if="mode === 'full'" class="tabs">
-        <button class="tab tab--active">JSON 格式化</button>
+        <button
+          v-for="item in VIEWS"
+          :key="item.id"
+          class="tab"
+          :class="{ 'tab--active': view === item.id }"
+          :title="`切换到${item.label}`"
+          @click="view = item.id"
+        >
+          {{ item.label }}
+        </button>
         <button class="tab" disabled title="后续版本加入">编码转换</button>
-        <button class="tab" disabled title="后续版本加入">代码生成</button>
       </nav>
 
       <span class="spacer" />
@@ -65,7 +76,7 @@ function openFull() {
       </button>
     </header>
 
-    <JsonTool :compact="compact" :mode="mode" />
+    <JsonTool v-model:view="view" :compact="compact" :mode="mode" />
 
     <transition name="fade">
       <div v-if="settingsOpen" class="mask" @click="settingsOpen = false">

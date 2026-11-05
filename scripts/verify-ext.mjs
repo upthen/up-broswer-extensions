@@ -45,7 +45,7 @@ const check = async (page, shotName) => {
   await send('Runtime.enable', {}, sessionId)
   await new Promise((r) => setTimeout(r, 2500))
   const evalJs = async (expr) =>
-    (await send('Runtime.evaluate', { expression: expr, returnByValue: true }, sessionId)).result.value
+    (await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }, sessionId)).result.value
   const info = await evalJs(`JSON.stringify({
     title: document.title,
     url: location.href,
@@ -54,6 +54,26 @@ const check = async (page, shotName) => {
     buttons: [...document.querySelectorAll('button')].map(b => b.textContent.trim()).filter(Boolean).slice(0, 8)
   })`)
   console.log(`${page} →`, info)
+
+  // 全屏页额外验证第二阶段视图在真实扩展环境中可用
+  if (page === 'index.html') {
+    const views = await evalJs(`(async () => {
+      const wait = (ms) => new Promise(r => setTimeout(r, ms));
+      const clickTab = (label) => {
+        const btn = [...document.querySelectorAll('.tabs .tab')].find(b => b.textContent.trim() === label);
+        if (btn) btn.click();
+      };
+      clickTab('树形视图'); await wait(250);
+      const treeRows = document.querySelectorAll('.node').length;
+      clickTab('JSONPath'); await wait(350);
+      const hits = document.querySelectorAll('.hit').length;
+      clickTab('代码生成'); await wait(250);
+      const code = [...document.querySelectorAll('.gen__line code')].map(n => n.textContent).join('\\n');
+      clickTab('JSON 格式化'); await wait(250);
+      return JSON.stringify({ treeRows, hits, tsInterface: code.includes('export interface Root'), editors: document.querySelectorAll('.cm-editor').length });
+    })()`)
+    console.log(`  增强视图 →`, views)
+  }
   const shot = await send('Page.captureScreenshot', { format: 'png' }, sessionId)
   writeFileSync(`.shots/verify-${shotName}.png`, Buffer.from(shot.data, 'base64'))
 }

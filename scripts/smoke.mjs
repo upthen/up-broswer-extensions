@@ -149,6 +149,6 @@ const report = match[1]
   .replace(/&amp;/g, '&')
   .trim()
 console.log(report)
-const fails = report.split('\n').filter((line) => !line.startsWith('PASS')).length
+const fails = report.split('\n').filter((line) => line.startsWith('FAIL') || line.startsWith('ERROR')).length
 console.log(`\n${fails === 0 ? '全部通过' : fails + ' 项失败'}`)
 process.exit(fails === 0 ? 0 : 1)

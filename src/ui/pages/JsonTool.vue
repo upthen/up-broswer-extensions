@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import EdPane from '../components/EdPane.vue'
+import TreeView from '../components/TreeView.vue'
+import QueryPanel from '../components/QueryPanel.vue'
+import CodegenPanel from '../components/CodegenPanel.vue'
 import Icon from '../components/Icon.vue'
 import { useSettings } from '../composables/useSettings'
 import {
@@ -15,13 +18,19 @@ import {
 } from '@/core/json'
 import type { IndentOption, JsonError, JsonStats, SortDirection } from '@/core/json'
 import { loadValue, removeValue, saveValue } from '@/shared/storage'
+import { VIEWS } from '@/shared/views'
+import type { ViewMode } from '@/shared/views'
 
 const props = withDefaults(defineProps<{ compact?: boolean; mode?: string }>(), {
   compact: false,
   mode: 'full',
 })
 
+/** 输出区视图由外壳 App 用 v-model:view 共享，顶栏 tab 与面板内 tab 都能切换 */
+const view = defineModel<ViewMode>('view', { default: 'text' })
+
 const { settings } = useSettings()
+const activeView = computed(() => VIEWS.find((item) => item.id === view.value) ?? VIEWS[0])
 
 const HISTORY_KEY = 'devbuddy.history'
 const SAMPLE = `{
@@ -337,6 +346,11 @@ function gotoError() {
 }
 
 function toggleFold() {
+  if (view.value !== 'text') {
+    view.value = 'text'
+    showToast('已切回文本视图，可再次点击折叠')
+    return
+  }
   const target = hasOutput.value ? outputPane.value : inputPane.value
   if (!target) return
   if (folded.value) {
@@ -360,7 +374,19 @@ function swapPane() {
   input.value = output.value
   output.value = next
   error.value = null
+  view.value = 'text'
   refreshStats()
+}
+
+function useQueryResult(text: string) {
+  input.value = text
+  view.value = 'text'
+  run('format')
+  showToast('查询结果已放回输入')
+}
+
+function locateInInput(pos: number) {
+  inputPane.value?.gotoPos(pos)
 }
 
 /* ---------------- 历史记录 ---------------- */
@@ -639,13 +665,28 @@ onBeforeUnmount(() => {
 
       <section class="pane">
         <header class="pane__head">
-          <span class="dot" :class="hasOutput ? 'dot--out' : 'dot--idle'" />
-          <span class="pane__title">结果</span>
+          <span class="dot" :class="hasOutput && view === 'text' ? 'dot--out' : 'dot--idle'" />
+          <span class="pane__title">{{ activeView.pane }}</span>
           <span class="pane__badge pane__badge--ghost">OUT</span>
+          <div class="viewtabs">
+            <button
+              v-for="item in VIEWS"
+              :key="item.id"
+              class="viewtab"
+              :class="{ 'viewtab--active': view === item.id }"
+              :title="`切换到${item.label}`"
+              @click="view = item.id"
+            >
+              <Icon :name="item.icon" :size="12" :stroke="1.9" />
+              <span v-if="!compact">{{ item.short }}</span>
+            </button>
+          </div>
           <span class="spacer" />
-          <span class="pane__meta">{{ outMeta }}</span>
+          <span v-if="view === 'text'" class="pane__meta">{{ outMeta }}</span>
         </header>
+
         <EdPane
+          v-if="view === 'text'"
           ref="outputPane"
           v-model="output"
           class="pane__body"
@@ -653,6 +694,32 @@ onBeforeUnmount(() => {
           :font-size="settings.fontSize"
           :wrap="settings.wrap"
           placeholder="格式化后的 JSON 会出现在这里"
+        />
+        <TreeView
+          v-else-if="view === 'tree'"
+          class="pane__body"
+          :text="input"
+          :compact="compact"
+          @locate="locateInInput"
+          @notify="showToast"
+          @repair="run('repair')"
+        />
+        <QueryPanel
+          v-else-if="view === 'query'"
+          class="pane__body"
+          :text="input"
+          :compact="compact"
+          @notify="showToast"
+          @repair="run('repair')"
+          @use="useQueryResult"
+        />
+        <CodegenPanel
+          v-else
+          class="pane__body"
+          :text="input"
+          :compact="compact"
+          @notify="showToast"
+          @repair="run('repair')"
         />
       </section>
     </div>
@@ -805,6 +872,53 @@ onBeforeUnmount(() => {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-3);
+}
+
+/* 输出区视图切换 */
+.viewtabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--surface-3);
+  flex: none;
+}
+
+.viewtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 21px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 10.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+
+.viewtab:hover {
+  color: var(--text);
+}
+
+.viewtab--active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-1);
+  font-weight: 600;
+}
+
+.tool--compact .viewtab {
+  padding: 0 5px;
+}
+
+.tool--compact .pane__meta {
+  display: none;
 }
 
 .pane__body {

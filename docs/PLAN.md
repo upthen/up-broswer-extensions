@@ -8,7 +8,7 @@
 | M1 骨架 | ✅ 完成 | MV3 manifest、Vite 多入口（弹窗/全屏/侧边栏/background）、设计 token、storage 封装、图标 |
 | M2 引擎 | ✅ 完成 | `core/json` 全套；44 个 Vitest 用例全绿（解析/错误定位/格式化/压缩/排序/转义/修复/统计） |
 | M3 编辑器 | ✅ 完成 | 原站 A1–A15 全部可交互；UI 冒烟测试 16 项全绿（`npm run smoke`） |
-| M4 增强 | ⏳ 未开始 | 树形视图、JSONPath、代码生成、Diff、格式互转 |
+| M4 增强 | 🟡 第一批完成 | B1 树形视图、B2 JSONPath、B3 代码生成已交付；B4 格式互转、B5 Diff、B6 时间戳、B8 编码工具待下一批 |
 | M5 打磨 | 🟡 部分 | 历史记录、主题、字号、快捷键已完成；多语言、Worker 大文件优化待做 |
 | M6 发布 | ⏳ 未开始 | 商店素材、隐私说明、打包分发 |
 
@@ -16,7 +16,22 @@
 
 - 原站 `F11` 是页面内全屏，浏览器不给我们拦截系统 `F11`，因此实现为「沉浸模式」（隐藏顶栏 + Esc 退出），按钮与快捷键都保留了。
 - 未做右键菜单取词（B7），v1 范围只到 JSON 模块，避免申请多余权限。
-- 背景脚本只保留命令与侧边栏唤起逻辑，`permissions` 仅 `storage` + `sidePanel`，无 host 权限。
+- 背景脚本只保留命令与侧边栏唤起逻辑，`permissions` 仍仅 `storage` + `sidePanel`，无 host 权限；第二阶段也未新增任何权限。
+- M4 的 JSONPath 没有引入第三方库：MV3 的 CSP 禁止 `eval` / `new Function`，过滤表达式用递归下降解释器求值，因此也是零依赖、可单测。
+- 代码生成按「先推断结构、再按语言渲染」拆两层，TS/Go/Java/Python/Rust 共用同一份 Schema，新增语言只需写一个 emit 分支。
+
+### M4 第一批验收记录（2026-11-05）
+
+| 项 | 结果 |
+|---|---|
+| `npm test` | 79 个用例全绿（json 44 / query 17 / codegen 18） |
+| `npm run smoke` | 16 项主流程断言全绿（原 A 组功能无回归） |
+| `npm run smoke:views` | 15 项增强视图断言全绿（切换/展开/筛选/过滤/换语言/改根名/切回文本） |
+| `npm run typecheck` | 零错误 |
+| 视觉校验 | 亮/暗、1280 全屏与 340 侧边栏截图确认无溢出，见 `docs/screenshots/` |
+| 扩展加载 | 两种目录加载方式均通过 CDP `Extensions.loadUnpacked` 实测，弹窗/全屏页/侧边栏正常渲染 |
+
+下一批建议顺序：B8 编码工具（Base64/URL/JWT，纯本地、性价比最高）→ B4 格式互转 → B5 Diff。
 
 ## 1. 项目定位
 

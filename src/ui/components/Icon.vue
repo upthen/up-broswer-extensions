@@ -35,6 +35,13 @@ const paths: Record<string, string> = {
   swap: '<path d="M6.5 8h11l-3.2-3.2M17.5 16h-11l3.2 3.2"/>',
   file: '<path d="M13.6 3.5H7.4A2.4 2.4 0 0 0 5 5.9v12.2a2.4 2.4 0 0 0 2.4 2.4h9.2a2.4 2.4 0 0 0 2.4-2.4V8.8z"/><path d="M13.6 3.5v5.3H19"/>',
   layout: '<rect x="3.5" y="4" width="7" height="16" rx="1.6"/><rect x="13.5" y="4" width="7" height="7" rx="1.6"/><rect x="13.5" y="13" width="7" height="7" rx="1.6"/>',
+  tree: '<rect x="3" y="3.5" width="6" height="4.5" rx="1.2"/><rect x="14" y="9.5" width="6" height="4.5" rx="1.2"/><rect x="14" y="16" width="6" height="4.5" rx="1.2"/><path d="M6 8v9.5h8M6 12h8"/>',
+  code: '<path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4l-3 16"/>',
+  chevron: '<path d="m9 5 7 7-7 7"/>',
+  filter: '<path d="M3.5 5h17l-6.6 7.6V19l-3.8-2v-4.4z"/>',
+  pin: '<path d="M9 3.5h6l-1 5 3.2 3.2H6.8L10 8.5z"/><path d="M12 11.7V20"/>',
+  brackets: '<path d="M8 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H8M16 4h1.5A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5H16"/>',
+  refresh: '<path d="M20 11a8 8 0 1 0-1.6 5.3"/><path d="M20 5v6h-6"/>',
 }
 </script>
 
