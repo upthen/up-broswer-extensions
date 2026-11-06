@@ -6,6 +6,8 @@ dist-*/
 *.zip
 *.crx
 *.pem
+# 打包产物（zip / crx / 签名私钥），由 npm run pack 生成
+release/
 .shots/
 .DS_Store
 Thumbs.db

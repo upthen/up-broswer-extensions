@@ -94,6 +94,22 @@ npm run build      # 类型检查 + 构建到 dist/，并生成根目录转发�
 
 后续改了代码：`npm run build` → 回到扩展页点刷新按钮，不需要重新「加载」。
 
+## 打包 / 分发
+
+```bash
+npm run pack          # 类型检查 + 干净构建 + 打安装包到 release/
+npm run verify:pack   # 解压安装包并用真实 Chrome 扩展环境验证
+```
+
+产物：
+
+| 文件 | 用途 |
+|---|---|
+| `release/DevBuddy-<版本>-chrome-extension.zip` | **推荐**。解压后选文件夹本身或里面的 `dist/` 都能加载；内含 `INSTALL.txt` 中文安装说明 |
+| `release/DevBuddy-<版本>.crx` | CRX3 签名包，供企业策略批量部署 / 留档。Chrome、Edge 正式版默认拦截非商店来源的 crx，个人安装请用上面的 zip |
+
+打包脚本会先校验两份 `manifest.json` 的版本与所有引用路径（含 HTML 里的 `assets/*`），再过滤掉冒烟测试生成的临时 HTML，用 Node 内置 `zlib` 生成 zip，最后调用本机 Chrome 的 `--pack-extension` 生成 crx（找不到 Chrome 时只跳过 crx，不影响 zip）。签名私钥保存在 `release/.keys/devbuddy.pem` 并复用，保证每次打包的扩展 ID 一致；整个 `release/` 已被 gitignore。
+
 ## 开发
 
 ```bash
@@ -108,6 +124,8 @@ npm run shot:views       # 生成 JSON 视图截图到 .shots/
 npm run shot:encoding    # 生成编码模块亮/暗与三入口截图
 npm run shot:qr          # 生成二维码模块亮/暗与三入口截图（CDP 精确锁定 1280/460/340）
 npm run verify:qr-ext    # 真实扩展环境验证（CDP 加载根目录与 dist/，检查三入口与解码）
+npm run pack             # 打 zip + crx 安装包到 release/
+npm run verify:pack      # 解压安装包并用真实扩展环境验证
 npm run typecheck
 ```
 

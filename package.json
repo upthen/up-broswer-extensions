@@ -20,6 +20,8 @@
     "shot:encoding": "node scripts/shot-encoding.mjs",
     "shot:qr": "node scripts/shot-qr.mjs",
     "verify:qr-ext": "node scripts/verify-qr-ext.mjs",
+    "pack": "npm run build && node scripts/pack.mjs",
+    "verify:pack": "node scripts/verify-pack.mjs",
     "icons": "node scripts/make-icons.mjs",
     "typecheck": "vue-tsc --noEmit"
   },
