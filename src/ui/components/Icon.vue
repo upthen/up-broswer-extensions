@@ -47,6 +47,9 @@ const paths: Record<string, string> = {
   key: '<circle cx="8" cy="12" r="4"/><path d="M12 12h8.5M17.5 12v3M20.5 12v2.2"/>',
   layers: '<path d="m12 3 8.5 4.5L12 12 3.5 7.5z"/><path d="m3.5 12 8.5 4.5 8.5-4.5M3.5 16.5 12 21l8.5-4.5"/>',
   arrow: '<path d="M4 12h15M14 7l5 5-5 5"/>',
+  qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="5.4" y="5.4" width="2.2" height="2.2" fill="currentColor" stroke="none"/><rect x="16.4" y="5.4" width="2.2" height="2.2" fill="currentColor" stroke="none"/><rect x="5.4" y="16.4" width="2.2" height="2.2" fill="currentColor" stroke="none"/><path d="M14 14h2.5v2.5H14zM19 14h2M14 19h2M19 18.5h2M11 4h1M11 7h1.5M11 11h3M11 15h2M4 11.5h1M11 19h1"/>',
+  scan: '<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M4 12h16"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2.2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="m4 17 5-5 3.5 3.5L16 12l4 4"/>',
 }
 </script>
 

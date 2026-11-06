@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import JsonTool from './pages/JsonTool.vue'
 import EncodingTool from './pages/EncodingTool.vue'
+import QrTool from './pages/QrTool.vue'
 import Icon from './components/Icon.vue'
 import { useSettings } from './composables/useSettings'
 import { pageUrl } from '../shared/urls'
@@ -14,15 +15,36 @@ const { settings, resolved, cycleTheme, themeLabel } = useSettings()
 const settingsOpen = ref(false)
 const view = ref<ViewMode>('text')
 
-type AppModule = 'json' | 'encoding'
-const initialModule: AppModule =
-  typeof location !== 'undefined' && new URLSearchParams(location.search).get('module') === 'encoding'
-    ? 'encoding'
-    : 'json'
-const module = ref<AppModule>(initialModule)
+type AppModule = 'json' | 'encoding' | 'qrcode'
+
+const MODULE_LABEL: Record<AppModule, string> = {
+  json: 'JSON 工具',
+  encoding: '编码转换',
+  qrcode: '二维码',
+}
+const MODULE_SHORT: Record<AppModule, string> = { json: 'JSON', encoding: '编码', qrcode: '二维码' }
+// 紧凑模式的主切换按钮沿用最初的 title，避免既有冒烟脚本与用户肌肉记忆失效
+const MODULE_TITLE: Record<AppModule, string> = {
+  json: '切换到 JSON 工具',
+  encoding: '切换到编码转换',
+  qrcode: '切换到二维码工具',
+}
+
+function readInitialModule(): AppModule {
+  if (typeof location === 'undefined') return 'json'
+  const param = new URLSearchParams(location.search).get('module')
+  return param === 'qrcode' ? 'qrcode' : param === 'encoding' ? 'encoding' : 'json'
+}
+
+const module = ref<AppModule>(readInitialModule())
 const jsonTool = ref<InstanceType<typeof JsonTool> | null>(null)
 
 const compact = computed(() => props.mode !== 'full')
+/** 主切换按钮在 JSON ↔ 编码之间循环，二维码模块下点它回到 JSON */
+const nextMain = computed<AppModule>(() => (module.value === 'encoding' ? 'json' : module.value === 'json' ? 'encoding' : 'json'))
+const mainTitle = computed(() => MODULE_TITLE[nextMain.value])
+const mainLabel = computed(() => (nextMain.value === 'encoding' ? '编码' : 'JSON'))
+const qrTitle = computed(() => (module.value === 'qrcode' ? '返回 JSON 工具' : '切换到二维码工具'))
 
 function setModule(next: AppModule) {
   module.value = next
@@ -35,7 +57,11 @@ function openJson(nextView: ViewMode) {
 }
 
 function toggleModule() {
-  setModule(module.value === 'json' ? 'encoding' : 'json')
+  setModule(nextMain.value)
+}
+
+function toggleQr() {
+  setModule(module.value === 'qrcode' ? 'json' : 'qrcode')
 }
 
 // CodeMirror 在 display:none 期间尺寸为 0，恢复显示后需要重新测量
@@ -49,7 +75,8 @@ const themeIcon = computed(() => {
 })
 
 function openFull() {
-  const url = pageUrl('index.html') + (module.value === 'encoding' ? '?module=encoding' : '')
+  const query = module.value === 'json' ? '' : `?module=${module.value}`
+  const url = pageUrl('index.html') + query
   if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
     void chrome.tabs.create({ url })
     window.close()
@@ -66,8 +93,8 @@ function openFull() {
         <span class="logo"><Icon name="braces" :size="15" :stroke="2" /></span>
         <span class="brand__text">
           <span class="brand__name">研发好朋友</span>
-          <span v-if="!compact" class="brand__sub">DevBuddy · {{ module === 'json' ? 'JSON 工具' : '编码转换' }}</span>
-          <span v-else class="brand__sub">{{ module === 'json' ? 'JSON' : '编码' }}</span>
+          <span v-if="!compact" class="brand__sub">DevBuddy · {{ MODULE_LABEL[module] }}</span>
+          <span v-else class="brand__sub">{{ MODULE_SHORT[module] }}</span>
         </span>
       </div>
 
@@ -91,6 +118,14 @@ function openFull() {
         >
           编码转换
         </button>
+        <button
+          class="tab tab--module"
+          :class="{ 'tab--active': module === 'qrcode' }"
+          title="切换到二维码（生成 / 解码）"
+          @click="setModule('qrcode')"
+        >
+          二维码
+        </button>
       </nav>
 
       <span class="spacer" />
@@ -106,11 +141,20 @@ function openFull() {
       <button
         v-if="mode !== 'full'"
         class="btn btn--sm btn--ghost btn--module"
-        :title="module === 'json' ? '切换到编码转换' : '切换到 JSON 工具'"
+        :title="mainTitle"
         @click="toggleModule"
       >
-        <Icon :name="module === 'json' ? 'layers' : 'braces'" :size="13" />
-        <span class="btn__label">{{ module === 'json' ? '编码' : 'JSON' }}</span>
+        <Icon :name="nextMain === 'encoding' ? 'layers' : 'braces'" :size="13" />
+        <span class="btn__label">{{ mainLabel }}</span>
+      </button>
+      <button
+        v-if="mode !== 'full'"
+        class="btn btn--icon btn--ghost btn--qr"
+        :class="{ 'btn--qr-active': module === 'qrcode' }"
+        :title="qrTitle"
+        @click="toggleQr"
+      >
+        <Icon name="qr" :size="14" />
       </button>
       <button v-if="mode !== 'full'" class="btn btn--sm btn--ghost btn--openfull" title="在新标签页打开" @click="openFull">
         <Icon name="external" :size="13" />
@@ -126,6 +170,9 @@ function openFull() {
     </div>
     <div v-show="module === 'encoding'" class="app__module">
       <EncodingTool :compact="compact" :mode="mode" :active="module === 'encoding'" />
+    </div>
+    <div v-show="module === 'qrcode'" class="app__module">
+      <QrTool :compact="compact" :mode="mode" :active="module === 'qrcode'" />
     </div>
 
     <transition name="fade">
@@ -165,6 +212,7 @@ function openFull() {
             <div><span class="kbd">Ctrl</span>+<span class="kbd">F</span> 查找 · <span class="kbd">Alt</span>+<span class="kbd">F</span> 常驻查找</div>
             <div><span class="kbd">F11</span> 全屏 · <span class="kbd">Esc</span> 退出</div>
             <div><span class="kbd">Alt</span>+<span class="kbd">Shift</span>+<span class="kbd">J</span> 打开全屏页</div>
+            <div>二维码：<span class="kbd">Ctrl</span>+<span class="kbd">V</span> 粘贴截图解码</div>
           </div>
         </div>
       </div>
@@ -287,6 +335,11 @@ function openFull() {
   font-weight: 600;
 }
 
+.btn--qr-active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .tabsep {
   width: 1px;
   height: 16px;
@@ -297,6 +350,15 @@ function openFull() {
 
 /* 340px 侧边栏：顶栏放不下文字，两个次要按钮收成纯图标 */
 @media (max-width: 400px) {
+  .topbar {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .brand__sub {
+    display: none;
+  }
+
   .btn--module .btn__label,
   .btn--openfull .btn__label {
     display: none;
@@ -307,6 +369,10 @@ function openFull() {
     width: 30px;
     padding: 0;
     justify-content: center;
+  }
+
+  .btn--qr {
+    width: 28px;
   }
 }
 

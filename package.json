@@ -14,9 +14,12 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke:views": "node scripts/smoke-views.mjs",
     "smoke:encoding": "node scripts/smoke-encoding.mjs",
-    "smoke:all": "node scripts/smoke.mjs && node scripts/smoke-views.mjs && node scripts/smoke-encoding.mjs",
+    "smoke:qr": "node scripts/smoke-qr.mjs",
+    "smoke:all": "node scripts/smoke.mjs && node scripts/smoke-views.mjs && node scripts/smoke-encoding.mjs && node scripts/smoke-qr.mjs",
     "shot:views": "node scripts/shot-views.mjs",
     "shot:encoding": "node scripts/shot-encoding.mjs",
+    "shot:qr": "node scripts/shot-qr.mjs",
+    "verify:qr-ext": "node scripts/verify-qr-ext.mjs",
     "icons": "node scripts/make-icons.mjs",
     "typecheck": "vue-tsc --noEmit"
   },
@@ -29,6 +32,8 @@
     "@codemirror/view": "^6.43.15",
     "@lezer/highlight": "^1.2.5",
     "codemirror": "^6.0.2",
+    "jsqr": "^1.4.0",
+    "qrcode-generator": "^2.0.4",
     "vue": "^3.5.44"
   },
   "devDependencies": {

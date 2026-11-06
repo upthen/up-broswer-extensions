@@ -1,7 +1,7 @@
 # 研发好朋友 · DevBuddy
 
 离线可用的开发者工具箱浏览器扩展（Chrome / Edge，Manifest V3）。
-第一个模块 1:1 复刻了 [锤子在线工具 - JSON 格式化](https://www.toolhelper.cn/JSON/JSONFormat)，并在原站基础上补齐了错误定位、历史记录、暗色主题与三套入口；第二个模块是纯本地的编码转换（Base64 / URL / Unicode / HTML 实体 / JWT）。顶栏可在两个模块间切换，各自的输入互不干扰。
+第一个模块 1:1 复刻了 [锤子在线工具 - JSON 格式化](https://www.toolhelper.cn/JSON/JSONFormat)，并在原站基础上补齐了错误定位、历史记录、暗色主题与三套入口；第二个模块是纯本地的编码转换（Base64 / URL / Unicode / HTML 实体 / JWT）；第三个模块是二维码生成与解码。顶栏可在三个模块间切换，各自的输入互不干扰。
 
 **核心原则：数据不出本机。** 不联网、不上传、不登录，`host_permissions` 为空，所有解析/格式化/修复都在本地完成。
 
@@ -48,6 +48,17 @@
 
 ![JWT 解码](docs/screenshots/encoding-jwt.png)
 
+**二维码生成 / 解码（第三阶段 · 新增）**
+
+- **生成**：文本按 UTF-8 写入 Byte 模式，中文与 emoji 不乱码；纠错等级 L/M/Q/H、版本自动或固定 1–40、静区 0/2/4/8 模块、前景/背景色与四组配色预设、导出尺寸 256–2048px；实时预览矢量 SVG，可下载 PNG / SVG、复制 SVG 源码或复制 PNG 图片
+- **解码**：点击选择、拖入或 `Ctrl+V` 粘贴本地图片，Canvas 取像素后交给 jsQR 识别，自动尝试反色二维码，按 UTF-8 还原字节内容，显示版本 / 字节数 / 数据段；支持 PNG / JPG / WebP / GIF，图片只在本机处理
+- **联动**：解码结果一键「放回生成输入」；内置「载入示例二维码」生成真实 PNG 并走完整解码链路，方便自测
+- 容量条实时显示已用字节 / 当前纠错等级上限，超限给中文提示与可操作建议；静区不足会提示扫码风险
+
+![二维码生成](docs/screenshots/qr-generate.png)
+
+![二维码解码](docs/screenshots/qr-decode.png)
+
 **额外增强**
 
 - 错误横幅：中文报错 + 提示 + 「定位到错误」/「尝试修复」两个按钮
@@ -87,17 +98,20 @@ npm run build      # 类型检查 + 构建到 dist/，并生成根目录转发�
 
 ```bash
 npm run dev              # 监听构建，产物仍在 dist/（改动后到扩展页点刷新）
-npm test                 # 核心引擎单元测试（133 个用例）
+npm test                 # 核心引擎单元测试（150 个用例）
 npm run smoke            # 主流程 UI 冒烟（16 项断言）
 npm run smoke:views      # 增强视图 UI 冒烟（15 项断言）
 npm run smoke:encoding   # 编码工具 UI 冒烟（39 项断言，含 340px 紧凑模式）
-npm run smoke:all        # 三套冒烟一起跑
+npm run smoke:qr         # 二维码 UI 冒烟（34 项断言，CDP 真实时间跑图片解码往返）
+npm run smoke:all        # 四套冒烟一起跑
 npm run shot:views       # 生成 JSON 视图截图到 .shots/
 npm run shot:encoding    # 生成编码模块亮/暗与三入口截图
+npm run shot:qr          # 生成二维码模块亮/暗与三入口截图（CDP 精确锁定 1280/460/340）
+npm run verify:qr-ext    # 真实扩展环境验证（CDP 加载根目录与 dist/，检查三入口与解码）
 npm run typecheck
 ```
 
-`tests/` 下按模块拆：`json.test.ts` 解析器与格式化、`query.test.ts` JSONPath、`codegen.test.ts` 类型推断与五语言输出、`encoding.test.ts` 五类编解码与 JWT 时间判定（54 个用例）。`core/` 全是纯函数，不依赖 DOM 与 chrome API。
+`tests/` 下按模块拆：`json.test.ts` 解析器与格式化、`query.test.ts` JSONPath、`codegen.test.ts` 类型推断与五语言输出、`encoding.test.ts` 五类编解码与 JWT 时间判定（54 个用例）、`qrcode.test.ts` 二维码生成/渲染/解码往返（17 个用例）。`core/` 全是纯函数，不依赖 DOM 与 chrome API；二维码的图片读取放在 `ui/composables/useQrImage.ts`。
 
 ## 结构
 
@@ -119,14 +133,21 @@ src/
 │  ├─ html.ts          命名 / 数字实体，不依赖 DOM
 │  ├─ jwt.ts           三段解码、声明中文化与有效期判定（不验签）
 │  └─ index.ts         工具元数据 + runEncoding 统一分发
+├─ core/qrcode/        二维码引擎（纯函数；qrcode-generator / jsqr 均本地打包）
+│  ├─ generate.ts      UTF-8 字节写入 Byte 模式、自动版本、纠错与容量
+│  ├─ render.ts        SVG 路径合并、颜色白名单、RGBA 矩阵
+│  ├─ decode.ts        jsQR RGBA 解码、UTF-8 字节还原、反色尝试
+│  └─ index.ts         统一入口与配色 / 尺寸元数据
 ├─ ui/                 Vue 3 视图层，只做「薄壳」
 │  ├─ pages/JsonTool.vue          JSON 主页面与全部动作编排
 │  ├─ pages/EncodingTool.vue      编码转换页面（五工具、方向、动态选项）
+│  ├─ pages/QrTool.vue            二维码页面（生成 / 解码双 tab）
 │  ├─ components/EdPane.vue       CodeMirror 6 封装（受控、错误行标注、按字符定位）
 │  ├─ components/TreeView.vue     树形视图
 │  ├─ components/QueryPanel.vue   JSONPath 查询
 │  ├─ components/CodegenPanel.vue 代码生成
 │  ├─ components/JwtResult.vue    JWT 三段结构化展示
+│  ├─ composables/useQrImage.ts   图片 → Canvas → RGBA、PNG / 示例图导出
 │  └─ styles/base.css             设计 token（亮/暗）+ CodeMirror 主题
 ├─ background/         右键/命令入口、侧边栏唤起
 └─ shared/             chrome.storage 封装、pageUrl（兼容两种加载位置）、views（视图定义）
@@ -142,6 +163,7 @@ src/
 - 不做登录、云同步、分享链接；扩展不发起任何网络请求。
 - 不做 AI 能力；如需，可后续加「自带 Key（BYOK）」入口，默认关闭。
 - 编码转换里的 JWT **只解码、不验签**；验证签名需要密钥与服务端，本扩展刻意不碰。
+- 二维码只解码用户主动选择/拖入/粘贴的本地图片，不调用摄像头、不截屏、不申请额外权限；倾斜过大、反光或非 UTF-8 编码的二维码可能识别失败。
 - 第二阶段尚未覆盖：JSON↔YAML/XML/CSV/TOML、JSON Diff、时间戳识别、页面取词、Mock 生成、多语言界面，排在后续批次。
 - 系统级全局快捷键、读写任意磁盘路径、托盘常驻等需本地原生程序，扩展做不了。
 
@@ -153,3 +175,7 @@ src/
 ![暗色编码工具](docs/screenshots/encoding-dark.png)
 
 ![侧边栏 JWT](docs/screenshots/encoding-sidepanel.png)
+
+![暗色二维码生成](docs/screenshots/qr-generate-dark.png)
+
+![侧边栏二维码解码](docs/screenshots/qr-sidepanel.png)

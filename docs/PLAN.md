@@ -8,7 +8,7 @@
 | M1 骨架 | ✅ 完成 | MV3 manifest、Vite 多入口（弹窗/全屏/侧边栏/background）、设计 token、storage 封装、图标 |
 | M2 引擎 | ✅ 完成 | `core/json` 全套；44 个 Vitest 用例全绿（解析/错误定位/格式化/压缩/排序/转义/修复/统计） |
 | M3 编辑器 | ✅ 完成 | 原站 A1–A15 全部可交互；UI 冒烟测试 16 项全绿（`npm run smoke`） |
-| M4 增强 | 🟡 前两批完成 | 第一批 B1 树形视图 / B2 JSONPath / B3 代码生成；第二批 B8 编码转换（五个工具）已交付。剩余 B4 格式互转、B5 Diff、B6 时间戳、B7 页面取词、B9 Mock、B11 多语言 |
+| M4 增强 | 🟡 前三批完成 | 第一批 B1 树形视图 / B2 JSONPath / B3 代码生成；第二批 B8 编码转换（五个工具）；第三批按需求新增 B12 二维码生成 / 解码（第三个模块）已交付。剩余 B4 格式互转、B5 Diff、B6 时间戳、B7 页面取词、B9 Mock、B11 多语言 |
 | M5 打磨 | 🟡 部分 | 历史记录、主题、字号、快捷键已完成；多语言、Worker 大文件优化待做 |
 | M6 发布 | ⏳ 未开始 | 商店素材、隐私说明、打包分发 |
 
@@ -21,6 +21,9 @@
 - 代码生成按「先推断结构、再按语言渲染」拆两层，TS/Go/Java/Python/Rust 共用同一份 Schema，新增语言只需写一个 emit 分支。
 - B8 的五个工具全部手写字节级实现，不用 `btoa`/`atob`（Latin-1 限制）、不用 DOM 解析 HTML 实体、不用第三方 JWT 库；MV3 零依赖、可单测，JWT 明确标注「不校验签名」。
 - 编码转换做成顶栏第二个「模块」而非输出区第五个视图：两组工具的输入域完全不同，`v-show` 常驻 + `requestMeasure` 保证切换后 CodeMirror 布局正常且输入不丢；紧凑模式用纯图标按钮切换模块。
+- 二维码没有手写 QR 编码：Reed-Solomon 纠错、掩码与 40 个版本的容量表属于成熟标准实现，引入 `qrcode-generator`（MIT）与 `jsqr`（Apache-2.0）两个纯 JS 库并打包进产物，仍满足 MV3 CSP（无 eval / new Function）与零网络请求；`core/qrcode` 只暴露纯函数，文件与 Canvas 读取隔离在 `ui/composables/useQrImage.ts`。
+- 第三批没有把紧凑模式原有的「JSON ↔ 编码」切换按钮改成三态循环，避免破坏既有入口与旧冒烟断言；改为新增一个独立二维码图标按钮，340px 下顶栏实测 `scrollWidth = clientWidth = 340`。
+- 二维码冒烟改用 CDP 真实时间：`canvas.toBlob` / `createImageBitmap` / `img.decode` 是真实异步任务，`--virtual-time-budget` 会快进虚拟时钟后提前 dump 造成误判；CDP 同时可精确锁定 340px 视口，让窄屏媒体查询真正生效。
 
 ### M4 第一批验收记录（2026-11-05）
 
@@ -44,6 +47,18 @@
 | 视觉校验 | 亮/暗、1280 全屏 / 460 弹窗 / 340 侧边栏截图确认无溢出；紧凑模式用 iframe 精确锁定宽度复拍 |
 | 扩展加载 | 根目录与 `dist/` 两种加载方式均通过 CDP 实测：三入口模块切换正常，JWT 卡片 2 张、声明 9 行、不验签提示存在 |
 | 权限 | 仍为 `storage` + `sidePanel`，`host_permissions: []`，零网络请求 |
+
+### M4 第三批验收记录（2026-11-06，二维码生成 / 解码）
+
+| 项 | 结果 |
+| --- | --- |
+| `npm test` | **150 个用例全绿**（json 44 / query 17 / codegen 18 / encoding 54 / qrcode 17） |
+| `npm run smoke:qr` | **34 项断言全绿**（生成实时更新、四档纠错、固定版本、配色、容量报错、示例 PNG 图片解码往返、结果回灌、模块切换不丢输入、340px 紧凑模式） |
+| `npm run smoke:all` | 原有三套 70 项断言全绿，A 组与前两批增强无回归 |
+| `npm run typecheck` / `npm run build` | 零错误；产物 `main` 约 717 KB（gzip 246 KB），两个二维码库已打进 bundle |
+| 视觉校验 | `shot:qr` 输出 5 张：亮 / 暗、1280 全屏 / 460 弹窗 / 340 侧边栏；二维码、缩略图、识别结果与顶栏均无溢出 |
+| 权限 | 仍为 `storage` + `sidePanel`，`host_permissions: []`，零网络请求，未申请摄像头或桌面捕获权限 |
+| 扩展加载 | `npm run verify:qr-ext` 通过 CDP `Extensions.loadUnpacked` 实测根目录与 `dist/` 两种加载：`chrome-extension://` 下全屏页生成 SVG、图片解码成功（中文 + emoji）、弹窗与侧边栏紧凑模式均正常，MV3 CSP 无 eval 报错 |
 
 下一批建议顺序：B4 格式互转（JSON↔YAML/XML/CSV）→ B5 JSON Diff → B6 时间戳识别。
 
