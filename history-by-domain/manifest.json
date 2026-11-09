@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "历史域名卡片墙",
+  "version": "1.2.1",
+  "description": "把浏览历史按域名聚合成卡片，支持全量搜索、按域名限定搜索与清除记录。本地运行，不上传任何数据。",
+  "permissions": ["history", "favicon"],
+  "action": {
+    "default_title": "打开历史域名卡片墙",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "background": { "service_worker": "sw.js" },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+H" },
+      "description": "打开历史域名卡片墙"
+    }
+  },
+  "omnibox": { "keyword": "h" }
+}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>历史域名卡片墙</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><h1>历史域名卡片墙</h1></div>
+    <div class="search-wrap">
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索域名或页面标题" aria-label="搜索历史记录" />
+      <kbd>Alt+H</kbd>
+    </div>
+    <div id="status" class="status">正在读取浏览器历史…</div>
+  </header>
+
+  <main>
+    <div id="scopeBar" class="scope-bar" hidden>
+      <span class="scope-chip">仅在 <strong id="scopeName"></strong> 内搜索
+        <button id="scopeExit" type="button" data-action="scope-exit" aria-label="移除域名限定">×</button>
+      </span>
+      <span class="scope-tip">含所有子域 · 按 Esc 或点 × 恢复全局搜索</span>
+      <button id="scopeOpenDetail" type="button" class="scope-open" data-action="scope-open-detail">在新页打开 ↗</button>
+    </div>
+
+    <div id="empty" class="empty" hidden></div>
+    <section id="grid" class="grid" aria-label="域名卡片"></section>
+
+    <section id="scopeView" hidden>
+      <div id="scopeEmpty" class="empty" hidden></div>
+      <ol id="scopeList" class="detail-list"></ol>
+    </section>
+
+    <div id="footerActions" class="footer-actions">
+      <button id="loadAll" type="button" class="btn">加载全部域名</button>
+      <span id="loadHint" class="hint"></span>
+    </div>
+
+    <section id="tailSection" class="tail-section" hidden>
+      <button id="tailToggle" type="button" class="tail-toggle" data-action="tail-toggle">其它 0 个域名</button>
+      <div id="tailGrid" class="grid" hidden></div>
+    </section>
+
+    <p class="footnote">数据来自浏览器自身的历史记录（约 90 天）。本插件不保存、不上传任何数据；卡片右上角的清除操作会直接删除浏览器历史，且不可恢复。</p>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

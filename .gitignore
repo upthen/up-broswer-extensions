@@ -147,3 +147,13 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Browser extension packaging artifacts
+# *.pem is the private signing key — never commit it
+*.pem
+*.crx
+*.zip
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

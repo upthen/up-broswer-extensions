@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>域名历史详情</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="back" type="button" class="detail-back">← 返回卡片墙</button>
+    <div class="detail-heading">
+      <h1 id="detailTitle">域名历史</h1>
+      <div id="detailSub" class="detail-sub">正在读取浏览器历史…</div>
+    </div>
+    <div class="search-wrap">
+      <input id="filter" type="search" autocomplete="off" spellcheck="false" placeholder="仅在此域名内搜索标题或网址" aria-label="在此域名内搜索" />
+    </div>
+  </header>
+
+  <main>
+    <p class="detail-note">列表来自浏览器自身保存的全部历史（约 90 天），含该域名及其所有子域。上方输入框<strong>仅在本域名内搜索</strong>，支持多词（空格分隔、需全部命中）并高亮命中词；点击标题在新标签打开。如需清除该域名的历史，请回卡片墙点卡片右上角的清除按钮。</p>
+    <div id="detailEmpty" class="empty" hidden></div>
+    <ol id="detailList" class="detail-list"></ol>
+  </main>
+
+  <script type="module" src="./detail.js"></script>
+</body>
+</html>
