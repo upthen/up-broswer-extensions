@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-*/
+# 根目录 manifest 由构建生成（转发到 dist/），不要提交
+/manifest.json
+*.zip
+*.crx
+*.pem
+# 打包产物（zip / crx / 签名私钥），由 npm run pack 生成
+release/
+.shots/
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.log
+coverage/
+.env
+.env.local
