@@ -6,6 +6,8 @@ import { splitWords } from './search.js';
 
 export { LOCAL_BUCKET };
 
+export const CLOSE_MODE = Object.freeze({ GROUP: 'group', OTHERS: 'others', SINGLE: 'single' });
+
 export function groupLabel(key) {
   return key === LOCAL_BUCKET ? '本地 / 其他' : key;
 }

@@ -2,7 +2,7 @@
 // 与 app.js 的历史侧刻意隔离：模块只在切到「标签页」时动态加载，
 // 只在激活且可见时读取，不注册任何 chrome.tabs 事件监听，不写任何存储。
 
-import { normalizeTabs, buildGroups, computeRemoveTargets, confirmText, LOCAL_BUCKET } from './tabs.js';
+import { normalizeTabs, buildGroups, computeRemoveTargets, confirmText, CLOSE_MODE } from './tabs.js';
 
 const $ = (s) => document.querySelector(s);
 const viewEl = $('#tabsView');
@@ -24,8 +24,6 @@ const state = {
   busy: false,
   pending: null, // { mode:'group'|'others'|'single', key, tabId, text }
   loadGen: 0,
-  renderGen: 0,
-  toastTimer: 0,
 };
 
 const cardEls = new Map();
@@ -56,7 +54,7 @@ function createCard(group) {
   el.dataset.key = group.key;
   el.innerHTML = `
     <div class="card-head">
-      <div class="fav"><img alt="" width="24" height="24" /><span class="fav-fallback"></span></div>
+      <div class="fav"><img alt="" width="24" height="24" hidden /><span class="fav-fallback"></span></div>
       <div class="meta"><div class="domain"></div><div class="stat"></div></div>
       <div class="card-tools">
         <button class="tabs-close-all" type="button" data-action="tabs-close-group">全部关闭</button>
@@ -74,6 +72,8 @@ function createCard(group) {
   `;
   const fallback = el.querySelector('.fav-fallback');
   fallback.textContent = (group.label || '?').charAt(0).toUpperCase();
+  const img = el.querySelector('img');
+  img.addEventListener('error', () => { img.hidden = true; fallback.hidden = false; }, { once: true });
   return el;
 }
 
@@ -91,6 +91,21 @@ function updateCard(el, group, multiWindow) {
   el.querySelector('.domain').textContent = group.label;
   el.querySelector('.stat').textContent = `${group.count} 个标签页`;
   el.classList.toggle('card--special', group.isSpecial);
+
+  const img = el.querySelector('img');
+  const fallback = el.querySelector('.fav-fallback');
+  const pageUrl = !group.isSpecial && group.tabs[0] ? group.tabs[0].url : '';
+  if (pageUrl && img.dataset.pageUrl !== pageUrl) {
+    img.src = faviconURL(pageUrl);
+    img.dataset.pageUrl = pageUrl;
+    img.hidden = false;
+    fallback.hidden = true;
+  } else if (!pageUrl) {
+    img.removeAttribute('src');
+    delete img.dataset.pageUrl;
+    img.hidden = true;
+    fallback.hidden = false;
+  }
 
   const closeAll = el.querySelector('.tabs-close-all');
   closeAll.hidden = group.isSpecial;
@@ -141,7 +156,7 @@ function updateCard(el, group, multiWindow) {
     ops.className = 'tab-ops';
     ops.innerHTML = `
       <button class="bm-op bm-op--icon tab-op" type="button" data-action="tab-close-others" hidden title="关闭该域名下其他标签页" aria-label="关闭该域名下其他标签页">${ICON.others}</button>
-      <button class="bm-op bm-op--icon bm-op--del tab-op" type="button" data-action="tab-close-one" hidden title="关闭这个标签页" aria-label="关闭这个标签页">${ICON.close}</button>
+      <button class="bm-op bm-op--icon bm-op--del tab-op" type="button" data-action="tab-close-one" title="关闭这个标签页" aria-label="关闭这个标签页">${ICON.close}</button>
     `;
     for (const btn of ops.querySelectorAll('button')) btn.dataset.id = String(item.tabId);
     // 特殊桶不给「关闭其他」，避免绕过「该桶不可整组关闭」的口径。
@@ -158,7 +173,6 @@ function updateCard(el, group, multiWindow) {
 
 function render() {
   if (!state.active) return;
-  const g = ++state.renderGen;
   const groups = buildGroups(state.items, state.query);
   const multiWindow = new Set(state.items.map((i) => i.windowId)).size > 1;
 
@@ -188,7 +202,6 @@ function render() {
   statusEl.textContent = state.query
     ? `命中 ${total ? groups.reduce((n, group) => n + group.count, 0) : 0} / ${total} 个标签页 · 纯内存过滤`
     : `共 ${total} 个标签页 · ${domains} 个域名 · 数据来自浏览器当前打开的页面`;
-  void g;
 }
 
 async function reload() {
@@ -242,13 +255,13 @@ viewEl.addEventListener('click', (e) => {
   }
   if (action === 'tabs-close-group' && key) {
     e.preventDefault();
-    askClose('group', key);
+    askClose(CLOSE_MODE.GROUP, key);
     return;
   }
   if (action === 'tab-close-others') {
     e.preventDefault();
     const item = state.items.find((i) => i.tabId === Number(id));
-    if (item) askClose('others', item.regDomain, item.tabId);
+    if (item) askClose(CLOSE_MODE.OTHERS, item.regDomain, item.tabId);
     return;
   }
   if (action === 'tab-close-one') {
@@ -278,43 +291,17 @@ function askClose(mode, key, tabId) {
   render();
 }
 
-// 单条关闭可逆，一次点击即执行，不进入两步确认。
-async function closeSingle(tabId) {
+// 三条写路径共用的执行链路：确认后按最新标签列表重算目标，关闭 → 重读 → toast。
+// 先 query 再算 id，避免渲染时的陈旧 id 误关别的页面。
+async function applyClose(selectTarget, emptyText) {
   if (state.busy) return;
   state.busy = true;
   render();
   try {
     const fresh = normalizeTabs(await chrome.tabs.query({}), selfOrigin);
-    const target = computeRemoveTargets(fresh, { mode: 'single', tabId });
+    const target = selectTarget(fresh);
     if (!target.count) {
-      toast('该标签页已经关闭了');
-      await reload();
-      return;
-    }
-    await chrome.tabs.remove(target.ids);
-    toast(`已关闭 1 个标签页 · 可用 Ctrl+Shift+T 恢复`);
-    await reload();
-  } catch (err) {
-    console.warn('[tabs] close single failed', err);
-    toast(`关闭失败：${String((err && err.message) || err)}`);
-    await reload();
-  } finally {
-    state.busy = false;
-    render();
-  }
-}
-
-async function confirmClose() {
-  const pending = state.pending;
-  if (!pending || state.busy) return;
-  state.busy = true;
-  render();
-  try {
-    // 确认时按最新标签列表重算，避免渲染时的陈旧 id 误关别的页面。
-    const fresh = normalizeTabs(await chrome.tabs.query({}), selfOrigin);
-    const target = computeRemoveTargets(fresh, pending);
-    if (!target.count) {
-      toast('这些标签页已经关闭了');
+      toast(emptyText);
       state.pending = null;
       await reload();
       return;
@@ -324,7 +311,7 @@ async function confirmClose() {
     state.pending = null;
     await reload();
   } catch (err) {
-    console.warn('[tabs] remove failed', err);
+    console.warn('[tabs] close failed', err);
     toast(`关闭失败：${String((err && err.message) || err)}`);
     state.pending = null;
     await reload();
@@ -332,6 +319,23 @@ async function confirmClose() {
     state.busy = false;
     render();
   }
+}
+
+// 单条关闭可逆，一次点击即执行，不进入两步确认。
+function closeSingle(tabId) {
+  return applyClose(
+    (fresh) => computeRemoveTargets(fresh, { mode: CLOSE_MODE.SINGLE, tabId }),
+    '该标签页已经关闭了',
+  );
+}
+
+function confirmClose() {
+  const pending = state.pending;
+  if (!pending) return;
+  return applyClose(
+    (fresh) => computeRemoveTargets(fresh, pending),
+    '这些标签页已经关闭了',
+  );
 }
 
 export async function activate(query) {
@@ -361,7 +365,6 @@ export function onQuery(query) {
 }
 
 export function isBusy() {
-  return state.busy;
+  // 与书签侧一致：确认态也算忙碌，禁止在等待二次确认时切走 tab。
+  return state.busy || !!state.pending;
 }
-
-export { toast, render, reload, LOCAL_BUCKET };
