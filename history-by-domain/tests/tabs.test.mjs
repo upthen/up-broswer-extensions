@@ -154,3 +154,37 @@ test('确认文案含数量、子域与恢复提示，不写「不可撤销」',
   assert.match(text, /Ctrl\+Shift\+T/);
   assert.doesNotMatch(text, /不可撤销/);
 });
+
+test('关闭其他：保留本行，关闭同域名其余标签并跳过固定页', () => {
+  const items = normalizeTabs([
+    tab(1, 'https://mail.google.com/keep', { title: '要保留的页面', windowId: 1, index: 0 }),
+    tab(2, 'https://mail.google.com/other', { windowId: 2, index: 0 }),
+    tab(3, 'https://drive.google.com/x', { windowId: 1, index: 4, pinned: true }),
+    tab(4, 'https://example.com/elsewhere'),
+  ], ORIGIN);
+  const target = computeRemoveTargets(items, { mode: 'others', tabId: 1 });
+  assert.deepEqual(target.ids, [2]);
+  assert.equal(target.count, 1);
+  assert.equal(target.keep.title, '要保留的页面');
+  assert.match(confirmText(target, 'others'), /保留「要保留的页面」/);
+  assert.match(confirmText(target, 'others'), /其余 1 个标签页/);
+});
+
+test('特殊桶的「关闭其他」没有目标', () => {
+  const items = normalizeTabs([
+    tab(1, 'chrome://settings/'),
+    tab(2, 'file:///C:/a.html'),
+  ], ORIGIN);
+  const target = computeRemoveTargets(items, { mode: 'others', tabId: 1 });
+  assert.deepEqual(target.ids, []);
+});
+
+test('单独关闭：只关指定标签，固定标签也可关闭', () => {
+  const items = normalizeTabs([
+    tab(1, 'https://example.com/a', { pinned: true }),
+    tab(2, 'https://example.com/b'),
+  ], ORIGIN);
+  const target = computeRemoveTargets(items, { mode: 'single', tabId: 1 });
+  assert.deepEqual(target.ids, [1]);
+  assert.equal(target.count, 1);
+});

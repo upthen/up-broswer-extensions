@@ -144,6 +144,11 @@ function updateCard(el, group, multiWindow) {
       <button class="bm-op bm-op--icon bm-op--del tab-op" type="button" data-action="tab-close-one" hidden title="关闭这个标签页" aria-label="关闭这个标签页">${ICON.close}</button>
     `;
     for (const btn of ops.querySelectorAll('button')) btn.dataset.id = String(item.tabId);
+    // 特殊桶不给「关闭其他」，避免绕过「该桶不可整组关闭」的口径。
+    const othersBtn = ops.querySelector('[data-action="tab-close-others"]');
+    othersBtn.hidden = group.isSpecial;
+    othersBtn.disabled = state.busy;
+    ops.querySelector('[data-action="tab-close-one"]').disabled = state.busy;
 
     li.append(focus, ops);
     frag.append(li);
@@ -240,6 +245,17 @@ viewEl.addEventListener('click', (e) => {
     askClose('group', key);
     return;
   }
+  if (action === 'tab-close-others') {
+    e.preventDefault();
+    const item = state.items.find((i) => i.tabId === Number(id));
+    if (item) askClose('others', item.regDomain, item.tabId);
+    return;
+  }
+  if (action === 'tab-close-one') {
+    e.preventDefault();
+    closeSingle(Number(id));
+    return;
+  }
   if (action === 'tabs-cancel') {
     state.pending = null;
     render();
@@ -260,6 +276,32 @@ function askClose(mode, key, tabId) {
   }
   state.pending = { mode, key, tabId, text: confirmText(target, mode) };
   render();
+}
+
+// 单条关闭可逆，一次点击即执行，不进入两步确认。
+async function closeSingle(tabId) {
+  if (state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    const fresh = normalizeTabs(await chrome.tabs.query({}), selfOrigin);
+    const target = computeRemoveTargets(fresh, { mode: 'single', tabId });
+    if (!target.count) {
+      toast('该标签页已经关闭了');
+      await reload();
+      return;
+    }
+    await chrome.tabs.remove(target.ids);
+    toast(`已关闭 1 个标签页 · 可用 Ctrl+Shift+T 恢复`);
+    await reload();
+  } catch (err) {
+    console.warn('[tabs] close single failed', err);
+    toast(`关闭失败：${String((err && err.message) || err)}`);
+    await reload();
+  } finally {
+    state.busy = false;
+    render();
+  }
 }
 
 async function confirmClose() {
