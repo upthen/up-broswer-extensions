@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "便签本 · Sticky",
+  "version": "0.4.3",
+  "description": "便签小卡片网格 + 整页记事本编辑器，支持导入本地 txt，打开就填、输入即存。纯本地明文，不联网、不同步。",
+  "minimum_chrome_version": "114",
+  "permissions": ["storage", "sidePanel", "unlimitedStorage", "contextMenus"],
+  "host_permissions": [],
+  "action": {
+    "default_title": "打开便签本",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "commands": {
+    "open-sticky": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "打开便签本侧栏"
+    }
+  }
+}

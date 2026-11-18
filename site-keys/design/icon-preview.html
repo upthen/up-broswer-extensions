@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>扩展图标预览 · 便签本 Sticky</title>
+<style>
+  :root {
+    --bg: #f8f8f6; --surface: #ffffff; --border: #e5e9f0;
+    --text: #1b2430; --text-2: #4b5665; --muted: #8a94a3;
+    --accent: #3b5bdb; --accent-soft: #eef1fd;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px clamp(16px, 5vw, 56px) 56px; background: var(--bg); color: var(--text); }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: .2px; }
+  .lede { color: var(--text-2); font-size: 13px; margin: 0 0 26px; line-height: 1.7; }
+  .lede code { background: var(--accent-soft); color: var(--accent); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .section { margin-bottom: 26px; }
+  .section__label { font-size: 12px; font-weight: 650; color: var(--muted); letter-spacing: .6px; text-transform: uppercase; margin-bottom: 10px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(27,36,48,.04); }
+  .toolbar { height: 58px; display: flex; align-items: center; gap: 14px; padding: 0 18px; }
+  .toolbar--light { background: #f1f3f4; border-bottom: 1px solid #dfe3e6; }
+  .toolbar--dark { background: #292a2d; border-bottom: 1px solid #3c3f43; }
+  .omnibox { flex: 1; height: 30px; border-radius: 16px; display: flex; align-items: center; padding: 0 14px; font-size: 12px; }
+  .toolbar--light .omnibox { background: #fff; color: #5f6368; border: 1px solid #dfe3e6; }
+  .toolbar--dark .omnibox { background: #3c3f43; color: #c8ccd0; }
+  .tools { display: flex; align-items: center; gap: 12px; }
+  .tools img { display: block; border-radius: 4px; }
+  .bar-caption { padding: 10px 18px 13px; font-size: 12px; color: var(--text-2); background: var(--surface); }
+  .sizes { display: flex; flex-wrap: wrap; gap: 14px; }
+  .size { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px 12px; min-width: 132px; text-align: center; }
+  .size__img { height: 128px; display: grid; place-items: center; }
+  .size__img img { display: block; }
+  .size__label { font-size: 12px; color: var(--text-2); margin-top: 10px; }
+  .size__zoom { height: 64px; margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+  .size__zoom img { image-rendering: pixelated; display: block; }
+  .size__hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .card { display: flex; align-items: center; gap: 16px; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+  .card img { display: block; border-radius: 10px; flex: none; }
+  .card__name { font-size: 15px; font-weight: 650; }
+  .card__desc { font-size: 12px; color: var(--text-2); margin-top: 4px; line-height: 1.6; }
+  .card__meta { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .note { font-size: 12px; color: var(--text-2); line-height: 1.8; border-left: 3px solid var(--accent); padding-left: 12px; }
+</style>
+</head>
+<body>
+  <h1>扩展图标 · 便签本 Sticky</h1>
+  <p class="lede">
+    由 <code>scripts/make-icons.mjs</code> 零依赖生成的 4 个 PNG，品牌蓝圆角底 + 白色便签纸 + 蓝色文字横线；
+    大尺寸再叠一张淡黄便签并带右下折角，16 / 32 简化成一张白纸两道线，保证工具栏尺寸下仍可辨认。
+    颜色与 <code>--accent #3b5bdb</code> / <code>--highlight #fff2b8</code> 一致，旧的钥匙图形已移除。
+  </p>
+
+  <div class="section">
+    <div class="section__label">浏览器工具栏 · 浅色主题</div>
+    <div class="panel">
+      <div class="toolbar toolbar--light">
+        <div class="omnibox">chrome://extensions</div>
+        <div class="tools"><img data-icon="16" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABjUlEQVR4nI3TWU/CQBQF4PuXZBGQTUGWJykIKMgmi3/QxMQXExITFJRVUFEYZHkz0cTlzRwzMxSrYuxJ5qn9Op3TWyIiCh7MlEBpyvzFCXyFMXz5B2zuM3hzQ3iyA2xk7rGeuYM7fQtX6gbOvWvmSHYV+sIzBIoT+FWcH8G7P4QnN8BG9heGI9mDPdGFfbejULA0Y4HSFP7iGL6CitkP3F9gZ7IHh8BXWNtpM5J4IvDx6Sv+y1H5aY47sMVbIPXcfGe9kbgNa7wJkliWxvPy9oF6733p4td4bDsSW2INkGx8JBrn4Tfa9+6WLn5NPCDegjXWgCVaB2lL0xtrrCnw6vYlSOKhaFxvLNGGwObIBUjigfhceo+wGq3DvH0BU6QGWkxauq+7RLPYvQZTuArSjqne8Ffn2Kicg7RjelR+/hcfnjzCFK4JbAidgdzpPvtjTOefq/mtNImrAq+EKoxcqVvF9Qt3fuC6xJEajOEqDGL3Cla2KvKPdCavFUeiyxZYM2my8UuB1XMbQmdMxZ8YStx2E0p7GQAAAABJRU5ErkJggg==" width="16" height="16" alt="16px" /><img data-icon="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADhUlEQVR4nLWXW08TURDH9yP0qwDl2gsUgdaYcL+1pbAgbUCJAj4Lq0GURz+DiUYSn0wk8QOIonSB0tuWQqEtarw08cH4Nmb27G7P7p4tISyT/B+3v/+ZM52Zw3FUBGJlRyBWFvzRkuiPlqBntgg9s2fQfRt1Cl0zqAJ0TZ/ADRR/DJ2oqTz4po7AN3kEHZM56IhI0I6ayIJXVgY84bToCacFTyjl4FgRiJX5QKxcQXAVXtTg3Rq8wIZPKfDJHIFHsoqBDHjDaTQAnlAK3KFUxR1M8gb4OcLBHy3r4D1W8GkFziM8r4N3mOAZGg7uYBJcwUNwjR/ydNorAQXu18HV1BdkWcF9Orh0ATyJcHCNJyptYwkHGhDI6enUW8FPNHjte6fhaQ1ePX0C2lBjBwIaEK3hp9C/cAbLG19h+RnqHJZQT8uyFlHrJVn3nxQVncG9NdQp3IxmldPT8EMVDq1jByJXq+jevP8DV43NrV9WcGgd3QfOqujsgKvx+t1PCp7Q4MSAseiUtNsd/pmUDG+j4C0je8Cxiu7BxjfbDdx9dKxLfcvonmrA3Omw6Ow3kDfBm0dE4FhtFiuejucvfsDCWulSwm9MBmT4vgZvHpYNmDud0QD+oCucu5TwGzruCHkN3qLAm4fjwLHaLP7f7TdwpMD3NHgTGmC12SWDAanwD+Kpv5cSfsMyQFJP4E1Du8SAsc1il7M70IB67yq8UTagm+2kx1+HgfnVXDX1Q7vEwOAX4FizfdFgwI4rIAYQHtfgxABPj1eyWOBwocOOIpxflarwIQJ3Dn4GjjXbr8PA3IpkgjsHZAP0bCeLxeJ6UfexHY0IDTRqqSdw58AOcKzFAue63TG3kjXBG/p3gGNtNddi4CExQMMb+j8RA8Zt9lYsZ7sBX0RU7n0HGgYIvB4NWG2zm1u/bYO/fPtdKzoVLhvo+6gYsFgocZ26aryi4E4DnBiISGKtbTYwm4GFxyeKjuXFAkcrCturKmw0slYkueKx6DojoqnoaHhd77bItUckQXtCqXBtl7fcZk2LBavNsoqOgqMErj2SdXgnshXGE+oCuHm2G9usBqeKTob3yfBKXe82eSd6JzJ8jScUc5u1hBs6nbHo6gkc6no/6N+HnnCa9+DD0fCEUuHGbZY1241wVtEpJ9fD1XCHUg53MCm4g0lReb9dcO9x3WxndToKLuKda2lX4j85a2GZruA9uAAAAABJRU5ErkJggg==" width="20" height="20" alt="32px" /></div>
+      </div>
+      <div class="bar-caption">左侧 16px 为工具栏实际显示尺寸，右侧为 2× 屏下的 32px 资源；图标四角透明，融入浅色工具栏。</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section__label">浏览器工具栏 · 深色主题</div>
+    <div class="panel">
+      <div class="toolbar toolbar--dark">
+        <div class="omnibox">chrome://extensions</div>
+        <div class="tools"><img data-icon="16" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABjUlEQVR4nI3TWU/CQBQF4PuXZBGQTUGWJykIKMgmi3/QxMQXExITFJRVUFEYZHkz0cTlzRwzMxSrYuxJ5qn9Op3TWyIiCh7MlEBpyvzFCXyFMXz5B2zuM3hzQ3iyA2xk7rGeuYM7fQtX6gbOvWvmSHYV+sIzBIoT+FWcH8G7P4QnN8BG9heGI9mDPdGFfbejULA0Y4HSFP7iGL6CitkP3F9gZ7IHh8BXWNtpM5J4IvDx6Sv+y1H5aY47sMVbIPXcfGe9kbgNa7wJkliWxvPy9oF6733p4td4bDsSW2INkGx8JBrn4Tfa9+6WLn5NPCDegjXWgCVaB2lL0xtrrCnw6vYlSOKhaFxvLNGGwObIBUjigfhceo+wGq3DvH0BU6QGWkxauq+7RLPYvQZTuArSjqne8Ffn2Kicg7RjelR+/hcfnjzCFK4JbAidgdzpPvtjTOefq/mtNImrAq+EKoxcqVvF9Qt3fuC6xJEajOEqDGL3Cla2KvKPdCavFUeiyxZYM2my8UuB1XMbQmdMxZ8YStx2E0p7GQAAAABJRU5ErkJggg==" width="16" height="16" alt="16px" /><img data-icon="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADhUlEQVR4nLWXW08TURDH9yP0qwDl2gsUgdaYcL+1pbAgbUCJAj4Lq0GURz+DiUYSn0wk8QOIonSB0tuWQqEtarw08cH4Nmb27G7P7p4tISyT/B+3v/+ZM52Zw3FUBGJlRyBWFvzRkuiPlqBntgg9s2fQfRt1Cl0zqAJ0TZ/ADRR/DJ2oqTz4po7AN3kEHZM56IhI0I6ayIJXVgY84bToCacFTyjl4FgRiJX5QKxcQXAVXtTg3Rq8wIZPKfDJHIFHsoqBDHjDaTQAnlAK3KFUxR1M8gb4OcLBHy3r4D1W8GkFziM8r4N3mOAZGg7uYBJcwUNwjR/ydNorAQXu18HV1BdkWcF9Orh0ATyJcHCNJyptYwkHGhDI6enUW8FPNHjte6fhaQ1ePX0C2lBjBwIaEK3hp9C/cAbLG19h+RnqHJZQT8uyFlHrJVn3nxQVncG9NdQp3IxmldPT8EMVDq1jByJXq+jevP8DV43NrV9WcGgd3QfOqujsgKvx+t1PCp7Q4MSAseiUtNsd/pmUDG+j4C0je8Cxiu7BxjfbDdx9dKxLfcvonmrA3Omw6Ow3kDfBm0dE4FhtFiuejucvfsDCWulSwm9MBmT4vgZvHpYNmDud0QD+oCucu5TwGzruCHkN3qLAm4fjwLHaLP7f7TdwpMD3NHgTGmC12SWDAanwD+Kpv5cSfsMyQFJP4E1Du8SAsc1il7M70IB67yq8UTagm+2kx1+HgfnVXDX1Q7vEwOAX4FizfdFgwI4rIAYQHtfgxABPj1eyWOBwocOOIpxflarwIQJ3Dn4GjjXbr8PA3IpkgjsHZAP0bCeLxeJ6UfexHY0IDTRqqSdw58AOcKzFAue63TG3kjXBG/p3gGNtNddi4CExQMMb+j8RA8Zt9lYsZ7sBX0RU7n0HGgYIvB4NWG2zm1u/bYO/fPtdKzoVLhvo+6gYsFgocZ26aryi4E4DnBiISGKtbTYwm4GFxyeKjuXFAkcrCturKmw0slYkueKx6DojoqnoaHhd77bItUckQXtCqXBtl7fcZk2LBavNsoqOgqMErj2SdXgnshXGE+oCuHm2G9usBqeKTob3yfBKXe82eSd6JzJ8jScUc5u1hBs6nbHo6gkc6no/6N+HnnCa9+DD0fCEUuHGbZY1241wVtEpJ9fD1XCHUg53MCm4g0lReb9dcO9x3WxndToKLuKda2lX4j85a2GZruA9uAAAAABJRU5ErkJggg==" width="20" height="20" alt="32px" /></div>
+      </div>
+      <div class="bar-caption">深色主题下蓝色底与白色纸面仍有足够对比，不额外做反色版本。</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section__label">四档尺寸 · 原生大小与放大对照</div>
+    <div class="sizes">
+      <div class="size">
+        <div class="size__img"><img data-icon="16" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABjUlEQVR4nI3TWU/CQBQF4PuXZBGQTUGWJykIKMgmi3/QxMQXExITFJRVUFEYZHkz0cTlzRwzMxSrYuxJ5qn9Op3TWyIiCh7MlEBpyvzFCXyFMXz5B2zuM3hzQ3iyA2xk7rGeuYM7fQtX6gbOvWvmSHYV+sIzBIoT+FWcH8G7P4QnN8BG9heGI9mDPdGFfbejULA0Y4HSFP7iGL6CitkP3F9gZ7IHh8BXWNtpM5J4IvDx6Sv+y1H5aY47sMVbIPXcfGe9kbgNa7wJkliWxvPy9oF6733p4td4bDsSW2INkGx8JBrn4Tfa9+6WLn5NPCDegjXWgCVaB2lL0xtrrCnw6vYlSOKhaFxvLNGGwObIBUjigfhceo+wGq3DvH0BU6QGWkxauq+7RLPYvQZTuArSjqne8Ffn2Kicg7RjelR+/hcfnjzCFK4JbAidgdzpPvtjTOefq/mtNImrAq+EKoxcqVvF9Qt3fuC6xJEajOEqDGL3Cla2KvKPdCavFUeiyxZYM2my8UuB1XMbQmdMxZ8YStx2E0p7GQAAAABJRU5ErkJggg==" width="16" height="16" alt="16" /></div>
+        <div class="size__label">16 × 16</div>
+        <div class="size__zoom"><img data-icon="16" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABjUlEQVR4nI3TWU/CQBQF4PuXZBGQTUGWJykIKMgmi3/QxMQXExITFJRVUFEYZHkz0cTlzRwzMxSrYuxJ5qn9Op3TWyIiCh7MlEBpyvzFCXyFMXz5B2zuM3hzQ3iyA2xk7rGeuYM7fQtX6gbOvWvmSHYV+sIzBIoT+FWcH8G7P4QnN8BG9heGI9mDPdGFfbejULA0Y4HSFP7iGL6CitkP3F9gZ7IHh8BXWNtpM5J4IvDx6Sv+y1H5aY47sMVbIPXcfGe9kbgNa7wJkliWxvPy9oF6733p4td4bDsSW2INkGx8JBrn4Tfa9+6WLn5NPCDegjXWgCVaB2lL0xtrrCnw6vYlSOKhaFxvLNGGwObIBUjigfhceo+wGq3DvH0BU6QGWkxauq+7RLPYvQZTuArSjqne8Ffn2Kicg7RjelR+/hcfnjzCFK4JbAidgdzpPvtjTOefq/mtNImrAq+EKoxcqVvF9Qt3fuC6xJEajOEqDGL3Cla2KvKPdCavFUeiyxZYM2my8UuB1XMbQmdMxZ8YStx2E0p7GQAAAABJRU5ErkJggg==" width="64" height="64" alt="16px 放大 4 倍" /></div>
+        <div class="size__hint">4× 放大 · 极简形态</div>
+      </div>
+      <div class="size">
+        <div class="size__img"><img data-icon="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADhUlEQVR4nLWXW08TURDH9yP0qwDl2gsUgdaYcL+1pbAgbUCJAj4Lq0GURz+DiUYSn0wk8QOIonSB0tuWQqEtarw08cH4Nmb27G7P7p4tISyT/B+3v/+ZM52Zw3FUBGJlRyBWFvzRkuiPlqBntgg9s2fQfRt1Cl0zqAJ0TZ/ADRR/DJ2oqTz4po7AN3kEHZM56IhI0I6ayIJXVgY84bToCacFTyjl4FgRiJX5QKxcQXAVXtTg3Rq8wIZPKfDJHIFHsoqBDHjDaTQAnlAK3KFUxR1M8gb4OcLBHy3r4D1W8GkFziM8r4N3mOAZGg7uYBJcwUNwjR/ydNorAQXu18HV1BdkWcF9Orh0ATyJcHCNJyptYwkHGhDI6enUW8FPNHjte6fhaQ1ePX0C2lBjBwIaEK3hp9C/cAbLG19h+RnqHJZQT8uyFlHrJVn3nxQVncG9NdQp3IxmldPT8EMVDq1jByJXq+jevP8DV43NrV9WcGgd3QfOqujsgKvx+t1PCp7Q4MSAseiUtNsd/pmUDG+j4C0je8Cxiu7BxjfbDdx9dKxLfcvonmrA3Omw6Ow3kDfBm0dE4FhtFiuejucvfsDCWulSwm9MBmT4vgZvHpYNmDud0QD+oCucu5TwGzruCHkN3qLAm4fjwLHaLP7f7TdwpMD3NHgTGmC12SWDAanwD+Kpv5cSfsMyQFJP4E1Du8SAsc1il7M70IB67yq8UTagm+2kx1+HgfnVXDX1Q7vEwOAX4FizfdFgwI4rIAYQHtfgxABPj1eyWOBwocOOIpxflarwIQJ3Dn4GjjXbr8PA3IpkgjsHZAP0bCeLxeJ6UfexHY0IDTRqqSdw58AOcKzFAue63TG3kjXBG/p3gGNtNddi4CExQMMb+j8RA8Zt9lYsZ7sBX0RU7n0HGgYIvB4NWG2zm1u/bYO/fPtdKzoVLhvo+6gYsFgocZ26aryi4E4DnBiISGKtbTYwm4GFxyeKjuXFAkcrCturKmw0slYkueKx6DojoqnoaHhd77bItUckQXtCqXBtl7fcZk2LBavNsoqOgqMErj2SdXgnshXGE+oCuHm2G9usBqeKTob3yfBKXe82eSd6JzJ8jScUc5u1hBs6nbHo6gkc6no/6N+HnnCa9+DD0fCEUuHGbZY1241wVtEpJ9fD1XCHUg53MCm4g0lReb9dcO9x3WxndToKLuKda2lX4j85a2GZruA9uAAAAABJRU5ErkJggg==" width="32" height="32" alt="32" /></div>
+        <div class="size__label">32 × 32</div>
+        <div class="size__zoom"><img data-icon="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADhUlEQVR4nLWXW08TURDH9yP0qwDl2gsUgdaYcL+1pbAgbUCJAj4Lq0GURz+DiUYSn0wk8QOIonSB0tuWQqEtarw08cH4Nmb27G7P7p4tISyT/B+3v/+ZM52Zw3FUBGJlRyBWFvzRkuiPlqBntgg9s2fQfRt1Cl0zqAJ0TZ/ADRR/DJ2oqTz4po7AN3kEHZM56IhI0I6ayIJXVgY84bToCacFTyjl4FgRiJX5QKxcQXAVXtTg3Rq8wIZPKfDJHIFHsoqBDHjDaTQAnlAK3KFUxR1M8gb4OcLBHy3r4D1W8GkFziM8r4N3mOAZGg7uYBJcwUNwjR/ydNorAQXu18HV1BdkWcF9Orh0ATyJcHCNJyptYwkHGhDI6enUW8FPNHjte6fhaQ1ePX0C2lBjBwIaEK3hp9C/cAbLG19h+RnqHJZQT8uyFlHrJVn3nxQVncG9NdQp3IxmldPT8EMVDq1jByJXq+jevP8DV43NrV9WcGgd3QfOqujsgKvx+t1PCp7Q4MSAseiUtNsd/pmUDG+j4C0je8Cxiu7BxjfbDdx9dKxLfcvonmrA3Omw6Ow3kDfBm0dE4FhtFiuejucvfsDCWulSwm9MBmT4vgZvHpYNmDud0QD+oCucu5TwGzruCHkN3qLAm4fjwLHaLP7f7TdwpMD3NHgTGmC12SWDAanwD+Kpv5cSfsMyQFJP4E1Du8SAsc1il7M70IB67yq8UTagm+2kx1+HgfnVXDX1Q7vEwOAX4FizfdFgwI4rIAYQHtfgxABPj1eyWOBwocOOIpxflarwIQJ3Dn4GjjXbr8PA3IpkgjsHZAP0bCeLxeJ6UfexHY0IDTRqqSdw58AOcKzFAue63TG3kjXBG/p3gGNtNddi4CExQMMb+j8RA8Zt9lYsZ7sBX0RU7n0HGgYIvB4NWG2zm1u/bYO/fPtdKzoVLhvo+6gYsFgocZ26aryi4E4DnBiISGKtbTYwm4GFxyeKjuXFAkcrCturKmw0slYkueKx6DojoqnoaHhd77bItUckQXtCqXBtl7fcZk2LBavNsoqOgqMErj2SdXgnshXGE+oCuHm2G9usBqeKTob3yfBKXe82eSd6JzJ8jScUc5u1hBs6nbHo6gkc6no/6N+HnnCa9+DD0fCEUuHGbZY1241wVtEpJ9fD1XCHUg53MCm4g0lReb9dcO9x3WxndToKLuKda2lX4j85a2GZruA9uAAAAABJRU5ErkJggg==" width="64" height="64" alt="32px 放大 2 倍" /></div>
+        <div class="size__hint">2× 放大 · 极简形态</div>
+      </div>
+      <div class="size">
+        <div class="size__img"><img data-icon="48" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAE20lEQVR4nMWay28bVRTG50/xn+CkSdrGj5QCjVeOkzZp7HH6jtlUCAkhITZsIlAXyKKLqkBTHoXsAqwQCNBILcQNaZImfsWOQ9PETltad0RKEQ2Pg+4878zcmTnjeJojfev8vqvzHd+5JxxnU7FMI9g/3sj2j9eF/vE69J+rw5Fzm4o24OWzRHclvXSGaF3W6TvwoqpTv8JhSWtw+OQavHCyJutEDQ6dWJU1VpXUR5SuSIqmV2TxZSHCl7ORVDlox8kCD8QyDSGWaYAErsgKrxhAw68x4Fd1+DEz/ApE+LKsVAnCqZIQTpUCLvBbiVimITrBH7GFX3eHlwysGk7fCF9hwisGIJwsiuFkMeEEDzJ8o3X40yo8q3Vw8FENvkzDSwolC0QJM3xAP3nq9DX4TQa8boCGx/a9J/iUCq8YGC2IodF8gDIg93zMDr7Noe1jhZZn9j0LHkKjeegdzQvatLHAM0PrFZ4V2qqX0FpbR4eH3uNEy0FiIOvnxHHue6/wBRoeDh5fzkrts6vQntp9aG0mjhs8kcDhQ7sO/Bt1uDTVhE+/Fo366jF8YlFT1pdN+FjSI6OmH8HFaw9g5LWaw8TRDfRqrbOsGxhZAs4VXun71y/chydP/wU/6p3LW5jQGk9/ZIkygLgm1Dae+QJP6snTf1qCP6AawITW70JMHAv8geHbwGFD63dNTuVgcmoGzr89bx/aEdrAbdqA+8Txvba/1TRxcdYQ2oOW05fhdQOIa4K5Qvxqyzo/UXc0sHXne+bEMcPvH14kBnC/tM/TABG7743w+48tAoe9JphrofRny6qu/4UwwA4tDW804HJN8L1MBizw2ukvUgYWiAHcNWFvDbDheyQDyA8Tc/ndQk59r8L3HJ0HDvthYi6/Q+wOrxnAfZg8bwPs0C7IBhR43QDibu97mQ0M2/e9Ct999BZw2NeEvTHgBD8P3UO3gMO+JuyFATd4yoD7a4K5JqebriITp1UDdqHtoeC7h+YUA4jXBHNhwkpMYGrn7/+sBmxCS/peNdAlGUC+JpiLTBI3fXN9GwVf/23H1oA5tDR81+AccNjXBD9Khd94wDJg3/cqfNfgL2YD9q8JfsKzDNjBd2vwmgHcE6Cf8EwDCPh9CWIA+QR47+GOb/COBoasfS/BSwZmgcMuHd794J5v8GJzjWmAFVodnjaAXDq8OnEXrk4/lLSQ3wR4VvOkbbECvz826g9xyQJPZAffRcFTBrw/AV6dyjH/cLuEge8cuAlcq0uH96/M+gZfKfxgG1odXjHQ6tIhdrYA1eKPbYffvv8dvPJWzgo/SMErp68baHHpEDuThzcvzMHkFzOKfoYrRJ/T+knSR6quEd0w6EOiz67De5dvQDwzaztxzPCdAzngDo1VhTYvHVCvCZhrgnni7DPBd8RzAjGQbfPSAfWagLkmsEKrqiMuGchyfWPVYJuXDqjXBOwvLRNePn0ieQHel64I+DWn+9IB85rgCZ4yQMEL2pYymq4EoukV0cOa06Xv3V8TMNcEVmgVeLEjPmPc2kf5lYTHNaeH0Lp/mCBDq2iGva2P8OVEhC+L7Zg4bq8J3uBv0ifPhtdMpEqBiPyPFciJ03poPU4coSOec/5nD7rCqWIwnCxmQ8miYIBHLB12P3E0A0LnQC6rTRtG/Q+Gse3J6GuL/gAAAABJRU5ErkJggg==" width="48" height="48" alt="48" /></div>
+        <div class="size__label">48 × 48</div>
+        <div class="size__zoom"></div>
+        <div class="size__hint">叠纸 + 折角 + 三条文字线</div>
+      </div>
+      <div class="size">
+        <div class="size__img"><img data-icon="128" src="data:image/png;base64,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" width="128" height="128" alt="128" /></div>
+        <div class="size__label">128 × 128</div>
+        <div class="size__zoom"></div>
+        <div class="size__hint">商店 / 扩展管理页规格</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section__label">扩展管理页卡片</div>
+    <div class="card">
+      <img data-icon="48" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAE20lEQVR4nMWay28bVRTG50/xn+CkSdrGj5QCjVeOkzZp7HH6jtlUCAkhITZsIlAXyKKLqkBTHoXsAqwQCNBILcQNaZImfsWOQ9PETltad0RKEQ2Pg+4878zcmTnjeJojfev8vqvzHd+5JxxnU7FMI9g/3sj2j9eF/vE69J+rw5Fzm4o24OWzRHclvXSGaF3W6TvwoqpTv8JhSWtw+OQavHCyJutEDQ6dWJU1VpXUR5SuSIqmV2TxZSHCl7ORVDlox8kCD8QyDSGWaYAErsgKrxhAw68x4Fd1+DEz/ApE+LKsVAnCqZIQTpUCLvBbiVimITrBH7GFX3eHlwysGk7fCF9hwisGIJwsiuFkMeEEDzJ8o3X40yo8q3Vw8FENvkzDSwolC0QJM3xAP3nq9DX4TQa8boCGx/a9J/iUCq8YGC2IodF8gDIg93zMDr7Noe1jhZZn9j0LHkKjeegdzQvatLHAM0PrFZ4V2qqX0FpbR4eH3uNEy0FiIOvnxHHue6/wBRoeDh5fzkrts6vQntp9aG0mjhs8kcDhQ7sO/Bt1uDTVhE+/Fo366jF8YlFT1pdN+FjSI6OmH8HFaw9g5LWaw8TRDfRqrbOsGxhZAs4VXun71y/chydP/wU/6p3LW5jQGk9/ZIkygLgm1Dae+QJP6snTf1qCP6AawITW70JMHAv8geHbwGFD63dNTuVgcmoGzr89bx/aEdrAbdqA+8Txvba/1TRxcdYQ2oOW05fhdQOIa4K5Qvxqyzo/UXc0sHXne+bEMcPvH14kBnC/tM/TABG7743w+48tAoe9JphrofRny6qu/4UwwA4tDW804HJN8L1MBizw2ukvUgYWiAHcNWFvDbDheyQDyA8Tc/ndQk59r8L3HJ0HDvthYi6/Q+wOrxnAfZg8bwPs0C7IBhR43QDibu97mQ0M2/e9Ct999BZw2NeEvTHgBD8P3UO3gMO+JuyFATd4yoD7a4K5JqebriITp1UDdqHtoeC7h+YUA4jXBHNhwkpMYGrn7/+sBmxCS/peNdAlGUC+JpiLTBI3fXN9GwVf/23H1oA5tDR81+AccNjXBD9Khd94wDJg3/cqfNfgL2YD9q8JfsKzDNjBd2vwmgHcE6Cf8EwDCPh9CWIA+QR47+GOb/COBoasfS/BSwZmgcMuHd794J5v8GJzjWmAFVodnjaAXDq8OnEXrk4/lLSQ3wR4VvOkbbECvz826g9xyQJPZAffRcFTBrw/AV6dyjH/cLuEge8cuAlcq0uH96/M+gZfKfxgG1odXjHQ6tIhdrYA1eKPbYffvv8dvPJWzgo/SMErp68baHHpEDuThzcvzMHkFzOKfoYrRJ/T+knSR6quEd0w6EOiz67De5dvQDwzaztxzPCdAzngDo1VhTYvHVCvCZhrgnni7DPBd8RzAjGQbfPSAfWagLkmsEKrqiMuGchyfWPVYJuXDqjXBOwvLRNePn0ieQHel64I+DWn+9IB85rgCZ4yQMEL2pYymq4EoukV0cOa06Xv3V8TMNcEVmgVeLEjPmPc2kf5lYTHNaeH0Lp/mCBDq2iGva2P8OVEhC+L7Zg4bq8J3uBv0ifPhtdMpEqBiPyPFciJ03poPU4coSOec/5nD7rCqWIwnCxmQ8miYIBHLB12P3E0A0LnQC6rTRtG/Q+Gse3J6GuL/gAAAABJRU5ErkJggg==" width="48" height="48" alt="icon48" />
+      <div>
+        <div class="card__name">便签本 · Sticky</div>
+        <div class="card__desc">便签小卡片网格 + 整页记事本编辑器，支持导入本地 txt，打开就填、输入即存。</div>
+        <div class="card__meta">版本 0.4.3 · 纯本地明文，不联网、不同步 · 按条分键增量存储</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    本页 4 档图标以 <code>data URI</code> 内嵌，离线打开或内置预览都不会破图；<code>npm run icons</code> 会同时刷新图标与这里的内嵌副本，随后 <code>npm run build</code> 把新图标复制进 <code>dist/icons/</code>。<br />
+    Chrome 会缓存扩展图标，改完记得在 <code>chrome://extensions</code> 点「重新加载」；若工具栏仍是旧图，移除后重新加载一次即可。
+  </p>
+</body>
+</html>

@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+  便签本 · Sticky —— 静态视觉设计稿 / Design Tokens  v3.1 双模块改版提案
+--------------------------------------------------------------------------------
+  产品形态：两个模块 —— ① 便签（小卡片 n*n 瀑布网格，点开才编辑）
+                        ② 记事本（整页编辑器，顶部/左侧切换文件）
+  边界声明：本文件仅为设计提案，不含任何脚本；所有按钮无行为；8 张便签与 4 篇
+  文档均为「示意数据」，密码为脱敏占位值（Poc@Meta_0••• / ••••••••），非真实凭证。
+  落地目标：site-keys/src/ui/styles/base.css（只换样式，不改业务逻辑）
+  离线约束：CSS 全部内嵌；图标为内联 SVG sprite；无 CDN / 外部字体 / 外部图片 / JS。
+
+  【配色 / Color】沿用 v3，保持一致性
+  --canvas          #eceef3   设计稿画布（仅提案页使用，不进产品）
+  --bg              #f8f8f6   App 背景（微暖白，克制的便签纸温度）
+  --surface         #ffffff   卡片 / 顶栏 / 编辑书写区
+  --surface-2       #f7f8f7   次级面：摘要底、文件栏、提示块
+  --surface-3       #eef1f5   窗口条 / 分段控件槽 / 骨架
+  --border          #e5e9f0   默认边框
+  --border-strong   #d3d9e4   hover 边框 / 分隔线
+  --text            #1b2430   主文字（深墨）
+  --text-2          #4b5665   次级文字 / 正文
+  --muted           #8a94a3   辅助文字 / 更新时间 / 字数
+  --accent          #3b5bdb   主色（靛蓝墨）        ← 旧 --primary #2563eb
+  --accent-hover    #2f4cc4
+  --accent-soft     #eef1fd   主色浅底（徽章 / 当前文件 / 选中态）
+  --accent-border   #c9d3f7
+  --accent-ring     rgba(59,91,219,.16)   focus 光环
+  --on-accent       #ffffff
+  --danger          #c23b33   危险
+  --danger-soft     #fcf0ef
+  --danger-border   #f0cdc9
+  --ok              #12805a   成功
+  --ok-soft         #e9f7f0
+  --ok-border       #bfe6d3
+  --highlight       #fff2b8   搜索命中底
+  --highlight-ink   #6b5310
+
+  【字号 / Type scale】
+  --font-sans : 系统无衬线（-apple-system / Segoe UI / PingFang SC / Microsoft YaHei）
+  --font-mono : 系统等宽（ui-monospace / SFMono-Regular / Consolas），用于地址/账号/密码行
+  --fs-micro 11px / --fs-xs 12px / --fs-sm 13px / --fs-base 14px / --fs-md 15px
+  --fs-lg 18px / --fs-xl 22px / --fs-2xl 28px / --fs-display 34px
+  字重：常规 400 · 次级 450 · 中等 600 · 标题 650~700
+  行高：界面 1.5 · 摘要等宽 1.7 · 正文书写区 1.95 · 说明文字 1.65
+
+  【间距 / Spacing】4px 基准
+  --sp-1 4 / --sp-2 8 / --sp-3 12 / --sp-4 16 / --sp-5 20 / --sp-6 24
+  --sp-8 32 / --sp-10 40 / --sp-12 48
+
+  【圆角 / Radius】
+  --r-xs 6 / --r-sm 9 / --r-md 12 / --r-lg 16 / --r-xl 20 / --r-pill 999px
+
+  【阴影 / Elevation】（双层柔阴影建立层级，不用重投影）
+  --shadow-xs    0 1px 2px rgba(27,36,48,.05)
+  --shadow-sm    0 1px 2px rgba(27,36,48,.06), 0 2px 6px rgba(27,36,48,.04)
+  --shadow-md    0 1px 2px rgba(27,36,48,.05), 0 6px 18px rgba(27,36,48,.07)
+  --shadow-lg    0 2px 6px rgba(27,36,48,.07), 0 14px 34px rgba(27,36,48,.10)
+  --shadow-pop   0 10px 30px rgba(27,36,48,.18), 0 2px 8px rgba(27,36,48,.08)
+  --shadow-frame 0 24px 60px rgba(27,36,48,.16), 0 2px 8px rgba(27,36,48,.06)
+
+  【动效 / Motion】
+  --dur-fast 120ms / --dur-base 180ms / --dur-slow 260ms
+  --ease cubic-bezier(.2,.7,.3,1)
+  用途：边框/底色/阴影过渡 · 卡片 hover 抬升 1px · 角标淡入 · 浮层入场 · 骨架呼吸。
+
+  【布局 / Layout】v3.1 新增
+  --nav-w    240px   记事本全屏文件栏宽度
+  --topbar-h 52px    共用顶栏高度（两个模块恒定，切换不增高）
+  --seg-h    32px    分段切换器高度
+  --card-min 150px   便签小卡片最小宽度（决定瀑布列数）
+================================================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>便签本 · Sticky — 双模块静态视觉设计稿</title>
+<style>
+/* ============================================================
+   0. Tokens
+   ============================================================ */
+:root{
+  --canvas:#eceef3; --bg:#f8f8f6; --surface:#ffffff; --surface-2:#f7f8f7;
+  --surface-3:#eef1f5; --border:#e5e9f0; --border-strong:#d3d9e4;
+  --text:#1b2430; --text-2:#4b5665; --muted:#8a94a3;
+  --accent:#3b5bdb; --accent-hover:#2f4cc4; --accent-soft:#eef1fd;
+  --accent-border:#c9d3f7; --accent-ring:rgba(59,91,219,.16); --on-accent:#ffffff;
+  --danger:#c23b33; --danger-hover:#a82f28; --danger-soft:#fcf0ef; --danger-border:#f0cdc9;
+  --ok:#12805a; --ok-soft:#e9f7f0; --ok-border:#bfe6d3;
+  --highlight:#fff2b8; --highlight-ink:#6b5310;
+
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --fs-micro:11px; --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:15px;
+  --fs-lg:18px; --fs-xl:22px; --fs-2xl:28px; --fs-display:34px;
+
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+  --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px;
+  --r-xs:6px; --r-sm:9px; --r-md:12px; --r-lg:16px; --r-xl:20px; --r-pill:999px;
+
+  --shadow-xs:0 1px 2px rgba(27,36,48,.05);
+  --shadow-sm:0 1px 2px rgba(27,36,48,.06),0 2px 6px rgba(27,36,48,.04);
+  --shadow-md:0 1px 2px rgba(27,36,48,.05),0 6px 18px rgba(27,36,48,.07);
+  --shadow-lg:0 2px 6px rgba(27,36,48,.07),0 14px 34px rgba(27,36,48,.10);
+  --shadow-pop:0 10px 30px rgba(27,36,48,.18),0 2px 8px rgba(27,36,48,.08);
+  --shadow-frame:0 24px 60px rgba(27,36,48,.16),0 2px 8px rgba(27,36,48,.06);
+
+  --dur-fast:120ms; --dur-base:180ms; --dur-slow:260ms;
+  --ease:cubic-bezier(.2,.7,.3,1);
+  --nav-w:240px; --topbar-h:52px; --seg-h:32px; --card-min:150px;
+}
+
+/* ============================================================
+   1. Base / 提案页画布
+   ============================================================ */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--canvas);color:var(--text);font-family:var(--font-sans);font-size:var(--fs-base);line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea{font-family:inherit}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ic--sm{width:14px;height:14px}
+.ic--lg{width:22px;height:22px}
+.canvas{max-width:1330px;margin:0 auto;padding:var(--sp-10) var(--sp-8) var(--sp-12)}
+
+.doc-section{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-lg);padding:var(--sp-8);margin-bottom:var(--sp-6);box-shadow:var(--shadow-sm)}
+.doc-head{border-left:4px solid var(--accent)}
+.kicker{display:inline-flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-micro);letter-spacing:.5px;color:var(--accent);font-weight:600}
+.kicker::before{content:"";width:18px;height:1px;background:var(--accent)}
+.doc-head__row{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-8);flex-wrap:wrap;margin-top:var(--sp-3)}
+.doc-head__title{font-size:var(--fs-display);font-weight:700;letter-spacing:-.6px;margin:0;line-height:1.2}
+.doc-head__title small{font-size:var(--fs-lg);font-weight:450;color:var(--muted);letter-spacing:0;margin-left:var(--sp-3)}
+.doc-head__sub{margin:var(--sp-2) 0 0;font-size:var(--fs-md);color:var(--text-2)}
+.meta{display:grid;grid-template-columns:auto auto;gap:6px var(--sp-4);font-size:var(--fs-xs);color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--sp-3) var(--sp-4)}
+.meta b{color:var(--text-2);font-weight:600}
+.callout{display:flex;gap:var(--sp-3);align-items:flex-start;margin-top:var(--sp-6);padding:var(--sp-3) var(--sp-4);background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--r-sm);font-size:var(--fs-xs);color:var(--text-2);line-height:1.7}
+.callout .ic{color:var(--accent);margin-top:2px}
+.callout strong{color:var(--accent)}
+
+.sec-head{display:flex;align-items:flex-start;gap:var(--sp-4);padding-bottom:var(--sp-5);margin-bottom:var(--sp-6);border-bottom:1px solid var(--border)}
+.sec-head__no{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:var(--r-sm);background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent);font-family:var(--font-mono);font-size:var(--fs-sm);font-weight:700}
+.sec-head__txt{flex:1;min-width:0}
+.sec-head__title{font-size:var(--fs-lg);font-weight:650;margin:0;letter-spacing:-.2px}
+.sec-head__title span{font-size:var(--fs-xs);font-weight:500;color:var(--muted);letter-spacing:.4px;margin-left:var(--sp-2)}
+.sec-head__desc{margin:3px 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.6}
+.pill{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-size:var(--fs-micro);color:var(--text-2);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-pill);padding:5px 11px}
+.subhead{display:flex;align-items:center;gap:var(--sp-2);margin:var(--sp-6) 0 var(--sp-3);font-size:var(--fs-sm);font-weight:650;color:var(--text)}
+.subhead::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--accent)}
+.subhead span{font-weight:450;color:var(--muted);font-size:var(--fs-xs)}
+.code{font-family:var(--font-mono);font-size:11px;background:var(--surface-3);border-radius:3px;padding:1px 5px;color:var(--accent)}
+
+/* ============================================================
+   2. Token 速览
+   ============================================================ */
+.tok-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:var(--sp-6)}
+.tok-panel{min-width:0}
+.tok-panel__label{font-size:var(--fs-xs);font-weight:650;color:var(--text-2);margin:0 0 var(--sp-3);display:flex;align-items:center;gap:var(--sp-2)}
+.tok-panel__label::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--accent)}
+.swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-2)}
+.sw{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.sw__chip{height:42px;border-bottom:1px solid rgba(27,36,48,.06)}
+.sw__meta{padding:6px 8px 7px}
+.sw__name{display:block;font-size:10.5px;font-weight:600;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw__hex{display:block;font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:1px}
+.type-scale{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--sp-3) var(--sp-4)}
+.type-row{display:flex;align-items:baseline;gap:var(--sp-3);padding:5px 0;border-bottom:1px dashed var(--border)}
+.type-row:last-child{border-bottom:0}
+.type-row__sample{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.type-row__tag{font-family:var(--font-mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.spec-row{display:flex;gap:var(--sp-2);flex-wrap:wrap;margin-top:var(--sp-3)}
+.spec{flex:1;min-width:88px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--sp-3) var(--sp-2);font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+.spec__box{background:var(--accent-soft);border:1px solid var(--accent-border)}
+.tok-note{margin:var(--sp-4) 0 0;font-size:var(--fs-xs);color:var(--muted);line-height:1.7}
+
+/* ============================================================
+   3. 视图外框（模拟 sidepanel.html / index.html 窗口）
+   ============================================================ */
+.view-split{display:flex;gap:var(--sp-8);align-items:flex-start;flex-wrap:wrap}
+.panel-wrap{position:relative;width:380px;max-width:100%;flex:none}
+.frame{background:var(--bg);border:1px solid var(--border-strong);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow-frame)}
+.frame__cap{height:32px;display:flex;align-items:center;gap:7px;padding:0 var(--sp-3);background:var(--surface-3);border-bottom:1px solid var(--border)}
+.frame__dots{display:flex;gap:5px;margin-right:5px}
+.frame__dots i{width:8px;height:8px;border-radius:50%;background:#d3d9e4;display:block}
+.frame__cap-label{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);letter-spacing:.3px}
+.frame__tag{margin-left:auto;font-size:10px;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-pill);padding:2px 9px}
+.frame__body{overflow:visible}
+.frame--side .frame__body{height:660px;overflow-y:auto}
+.frame__body::-webkit-scrollbar{width:9px}
+.frame__body::-webkit-scrollbar-track{background:transparent}
+.frame__body::-webkit-scrollbar-thumb{background:#d8dde6;border-radius:9px;border:2px solid var(--bg)}
+.frame--wide{width:1200px;max-width:100%}
+.view-notes{flex:1;min-width:260px}
+.view-notes h4{margin:0 0 var(--sp-1);font-size:var(--fs-md);font-weight:650}
+.view-notes > p{margin:0 0 var(--sp-5);font-size:var(--fs-xs);color:var(--muted)}
+.point-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--sp-3)}
+.point-list li{display:flex;gap:var(--sp-3);font-size:var(--fs-xs);line-height:1.7;color:var(--text-2)}
+.point-list__no{width:20px;height:20px;flex:none;display:grid;place-items:center;border-radius:var(--r-xs);background:var(--surface-3);color:var(--accent);font-family:var(--font-mono);font-size:10px;font-weight:700;margin-top:1px}
+.point-list b{color:var(--text);font-weight:650}
+.wide-note{display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-6);padding-top:var(--sp-5);border-top:1px solid var(--border)}
+.wide-note__item{flex:1;min-width:190px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--sp-3) var(--sp-4);font-size:var(--fs-xs);color:var(--text-2);line-height:1.65}
+.wide-note__item b{display:block;color:var(--text);font-weight:650;margin-bottom:3px}
+
+/* ============================================================
+   4. 共用顶栏 + 一级分段切换器
+   ============================================================ */
+.app{--pad:14px;background:var(--bg);min-height:100%;color:var(--text);position:relative}
+.topbar{height:var(--topbar-h);display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--pad);background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:8}
+.brand{display:inline-flex;align-items:center;gap:9px;min-width:0}
+.brand__mark{width:26px;height:26px;flex:none;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(59,91,219,.28)}
+.brand__name{font-size:var(--fs-md);font-weight:680;letter-spacing:.2px;white-space:nowrap}
+.brand__name em{font-style:normal;font-weight:450;color:var(--muted);font-size:var(--fs-sm)}
+.topbar__spacer{flex:1;min-width:0}
+.seg{display:inline-flex;align-items:center;gap:2px;height:var(--seg-h);padding:3px;background:var(--surface-3);border:1px solid var(--border);border-radius:var(--r-pill)}
+.seg__item{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:100%;padding:0 11px;border:0;border-radius:var(--r-pill);background:transparent;color:var(--muted);font-size:var(--fs-xs);font-weight:600;cursor:pointer;white-space:nowrap;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.seg__item:hover{color:var(--text-2)}
+.seg__item.is-active{background:var(--surface);color:var(--accent);box-shadow:var(--shadow-xs)}
+.seg__count{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:var(--r-pill);padding:0 5px;line-height:16px}
+.seg__item:not(.is-active) .seg__count{color:var(--muted);background:var(--surface)}
+.seg__item:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-ring)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;font-size:var(--fs-sm);font-weight:600;line-height:1;border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:var(--r-sm);padding:0 12px;height:34px;cursor:pointer;white-space:nowrap;transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.btn:hover{border-color:var(--border-strong);background:var(--surface-2);color:var(--text)}
+.btn:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-xs)}
+.btn--primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);color:#fff;box-shadow:var(--shadow-md)}
+.btn--accent{background:var(--accent-soft);border-color:var(--accent-border);color:var(--accent)}
+.btn--accent:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn--danger{color:var(--danger);border-color:var(--danger-border);background:var(--surface)}
+.btn--danger:hover{background:var(--danger-soft);border-color:var(--danger);color:var(--danger-hover)}
+.btn--ghost{background:transparent;border-color:var(--border);color:var(--text-2)}
+.btn--ghost:hover{background:var(--surface-2);border-color:var(--border-strong);color:var(--text)}
+.btn--bare{background:transparent;border-color:transparent;color:var(--muted)}
+.btn--bare:hover{background:var(--surface-3);color:var(--text)}
+.btn--icon{width:32px;height:32px;padding:0}
+.btn--sm{height:30px;font-size:var(--fs-xs);padding:0 10px}
+
+/* 顶栏小样（01 区块用，不进 frame） */
+.bar-sample{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden}
+.bar-sample .topbar{position:static}
+.bar-sample--narrow{width:380px;max-width:100%}
+.bar-sample--wide{width:100%}
+.bar-sample__foot{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface-2);border-top:1px solid var(--border);font-size:var(--fs-micro);color:var(--muted)}
+
+/* ============================================================
+   5. 便签模块：工具条 + 小卡片瀑布网格
+   ============================================================ */
+.toolbar{position:sticky;top:var(--topbar-h);z-index:7;display:flex;align-items:center;gap:var(--sp-2);padding:var(--sp-2) var(--pad);background:var(--bg);border-bottom:1px solid var(--border)}
+.search{position:relative;display:flex;align-items:center;flex:1;min-width:0}
+.search > .ic{position:absolute;left:10px;color:var(--muted);pointer-events:none;transition:color var(--dur-fast) var(--ease)}
+.search input{width:100%;height:34px;padding:0 10px 0 31px;font-size:var(--fs-sm);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.search input::placeholder{color:var(--muted)}
+.search input:focus,.search.is-focus input{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+.search:focus-within > .ic,.search.is-focus > .ic{color:var(--accent)}
+.toolbar .btn--primary{height:34px;flex:none}
+.toolbar .btn--add{width:34px;padding:0;font-size:17px}
+
+.app__body{padding:var(--sp-3) var(--pad) var(--sp-5)}
+.grid-meta{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:var(--fs-micro);color:var(--muted)}
+.grid-meta .dot{width:5px;height:5px;border-radius:50%;background:var(--ok)}
+.grid-meta span:last-child{margin-left:auto;font-family:var(--font-mono)}
+
+/* 瀑布：CSS 多列，卡片高度随摘要自然错落 */
+.stickies{columns:2;column-gap:10px}
+.sticky{position:relative;display:inline-block;vertical-align:top;width:100%;margin:0 0 10px;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;padding:10px 10px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-xs);cursor:pointer;transition:border-color var(--dur-base) var(--ease),box-shadow var(--dur-base) var(--ease),transform var(--dur-base) var(--ease)}
+.sticky:hover,.sticky.is-hover{border-color:var(--border-strong);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.sticky.is-active{border-color:var(--accent-border);box-shadow:0 0 0 3px var(--accent-ring)}
+.sticky__title{margin:0 22px 6px 0;font-size:var(--fs-sm);font-weight:650;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sticky__excerpt{font-family:var(--font-mono);font-size:10.5px;line-height:1.7;color:var(--text-2);white-space:pre-line;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;max-height:72px}
+.sticky__foot{display:flex;align-items:center;gap:4px;margin-top:8px;padding-top:6px;border-top:1px solid var(--border);color:var(--muted);font-size:10px}
+
+/* 窄卡片操作：默认收起，hover / focus 时淡入角标 + ⋯ 菜单 */
+.sticky__ops{position:absolute;top:6px;right:6px;display:flex;gap:3px;opacity:0;transform:translateY(-3px);pointer-events:none;transition:opacity var(--dur-fast) var(--ease),transform var(--dur-fast) var(--ease)}
+.sticky:hover .sticky__ops,.sticky.is-hover .sticky__ops,.sticky.is-active .sticky__ops,.sticky:focus-within .sticky__ops{opacity:1;transform:none;pointer-events:auto}
+.sticky__op{width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--border);border-radius:var(--r-xs);background:rgba(255,255,255,.97);color:var(--muted);cursor:pointer;transition:color var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.sticky__op .ic{width:12px;height:12px}
+.sticky__op:hover{color:var(--accent);border-color:var(--accent-border);background:var(--accent-soft)}
+.sticky__op--key{color:var(--accent);border-color:var(--accent-border);background:var(--accent-soft)}
+.sticky__op--key:hover{background:var(--accent);color:#fff}
+.sticky__ops-hint{position:absolute;top:6px;right:7px;color:var(--border-strong);pointer-events:none}
+.sticky:hover .sticky__ops-hint,.sticky.is-hover .sticky__ops-hint,.sticky.is-active .sticky__ops-hint,.sticky:focus-within .sticky__ops-hint{opacity:0}
+
+/* ⋯ 展开菜单 */
+.sticky__menu{position:absolute;top:30px;right:6px;width:128px;z-index:12;padding:4px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);box-shadow:var(--shadow-pop)}
+.sticky__menu-item{display:flex;align-items:center;gap:7px;width:100%;padding:6px 8px;border:0;border-radius:var(--r-xs);background:transparent;color:var(--text-2);font-size:var(--fs-micro);text-align:left;cursor:pointer}
+.sticky__menu-item:hover{background:var(--surface-2);color:var(--text)}
+.sticky__menu-item--danger{color:var(--danger)}
+.sticky__menu-item--danger:hover{background:var(--danger-soft)}
+.sticky__menu-sep{height:1px;background:var(--border);margin:3px 4px}
+
+/* 全屏宽视图：4 列、卡片略松 */
+.app--wide{--pad:26px;--topbar-h:56px}
+.app--wide .topbar,.app--wide .toolbar{position:static}
+.app--wide .brand__name{font-size:var(--fs-lg)}
+.app--wide .brand__mark{width:30px;height:30px;border-radius:9px}
+.app--wide .toolbar{padding:var(--sp-4) var(--pad);gap:var(--sp-3)}
+.app--wide .search{max-width:420px}
+.app--wide .toolbar .btn--primary{height:36px;padding:0 16px}
+.app--wide .app__body{padding:var(--sp-5) var(--pad) var(--sp-8)}
+.app--wide .stickies{columns:4;column-gap:14px}
+.app--wide .sticky{margin-bottom:14px;padding:12px 12px 9px}
+.app--wide .sticky__title{font-size:var(--fs-base)}
+.app--wide .sticky__excerpt{font-size:11px;-webkit-line-clamp:4;max-height:76px}
+
+/* 响应式列数对照条 */
+.resp-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-4)}
+.resp-item{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-4)}
+.resp-item__head{display:flex;align-items:baseline;gap:6px;margin-bottom:var(--sp-3)}
+.resp-item__head b{font-size:var(--fs-xs);color:var(--text)}
+.resp-item__head span{font-size:10px;color:var(--muted);margin-left:auto}
+.resp-grid{display:grid;gap:5px}
+.resp-grid i{display:block;height:22px;background:var(--surface);border:1px solid var(--border);border-radius:4px;box-shadow:var(--shadow-xs)}
+.resp-grid i:nth-child(3n){height:30px}
+.resp-grid i:nth-child(4n){height:17px}
+.resp-grid--2{grid-template-columns:repeat(2,1fr)}
+.resp-grid--3{grid-template-columns:repeat(3,1fr)}
+.resp-grid--4{grid-template-columns:repeat(4,1fr)}
+.resp-item p{margin:var(--sp-3) 0 0;font-size:10px;color:var(--muted);line-height:1.6}
+
+/* 卡片详情浮层（点开后的编辑态） */
+.detail-stage{position:relative;height:400px;border-radius:var(--r-md);overflow:hidden;background:var(--bg);border:1px solid var(--border)}
+.detail-ghost{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;opacity:.5}
+.detail-ghost i{display:block;height:74px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)}
+.detail-ghost i:nth-child(3n){height:96px}
+.detail-veil{position:absolute;inset:0;background:rgba(27,36,48,.34);display:grid;place-items:center;padding:var(--sp-4)}
+.detail{width:min(460px,100%);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:var(--sp-5);animation:detailIn var(--dur-slow) var(--ease) both}
+@keyframes detailIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+.detail__head{display:flex;align-items:center;gap:8px;margin-bottom:var(--sp-3)}
+.detail__head b{font-size:var(--fs-sm);font-weight:650}
+.detail__head .sp{flex:1}
+.detail__head span{font-size:var(--fs-micro);color:var(--muted)}
+.detail__title{width:100%;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;padding:2px 0 9px;font-size:var(--fs-md);font-weight:650;color:var(--text)}
+.detail__title:focus{outline:none;border-bottom-color:var(--accent)}
+.detail__body{display:block;width:100%;min-height:116px;margin-top:10px;resize:vertical;font-family:var(--font-mono);font-size:12px;line-height:1.8;color:var(--text-2);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 11px;white-space:pre-wrap}
+.detail__body:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);background:var(--surface)}
+.detail__foot{display:flex;align-items:center;gap:6px;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)}
+.detail__foot .t{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-micro);color:var(--muted)}
+.detail__foot .sp{flex:1}
+.detail__foot .btn{height:30px;font-size:var(--fs-xs)}
+
+/* 危险说明 + 清空（保留在便签模块底部） */
+.app-footer{margin-top:var(--sp-4);padding:var(--sp-3) 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:var(--sp-2)}
+.risk{display:flex;gap:8px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 10px}
+.risk > .ic{color:var(--muted);margin-top:1px}
+.risk p{margin:0;font-size:var(--fs-micro);line-height:1.65;color:var(--muted)}
+.app-footer__actions{display:flex;justify-content:flex-end}
+.app--wide .app-footer{flex-direction:row;align-items:center;gap:var(--sp-4)}
+.app--wide .risk{flex:1}
+.app--wide .app-footer__actions{flex:none}
+
+/* ============================================================
+   6. 记事本模块：文件切换 + 整页编辑器
+   ============================================================ */
+.nb{display:flex;flex-direction:column;background:var(--surface);min-height:100%}
+.nb-bar{display:flex;align-items:center;gap:6px;height:40px;flex:none;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border)}
+.nb-select{display:inline-flex;align-items:center;gap:6px;min-width:0;max-width:100%;height:28px;padding:0 8px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:var(--fs-xs);font-weight:600;color:var(--text);cursor:pointer}
+.nb-select .ic:first-child{color:var(--accent)}
+.nb-select .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-select .chev{color:var(--muted)}
+.nb-meta{font-size:10px;color:var(--muted);white-space:nowrap;margin-left:auto}
+.nb-bar .btn{border-color:transparent;background:transparent;color:var(--muted)}
+.nb-bar .btn:hover{background:var(--surface-3);color:var(--text)}
+
+/* 窄栏文件下拉浮层（静态展开态） */
+.nb-dropdown{position:absolute;top:calc(var(--topbar-h) + 40px);left:12px;width:250px;z-index:15;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-md);box-shadow:var(--shadow-pop);padding:5px}
+.nb-dropdown__head{display:flex;align-items:center;padding:6px 8px 8px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:4px}
+.nb-dropdown__head .sp{flex:1}
+
+/* 文件列表（左栏 / 下拉共用） */
+.file-list{display:flex;flex-direction:column;gap:2px}
+.file-item{position:relative;display:flex;align-items:flex-start;gap:8px;padding:8px 9px;border:1px solid transparent;border-radius:var(--r-sm);cursor:pointer;transition:background var(--dur-fast) var(--ease),border-color var(--dur-fast) var(--ease)}
+.file-item:hover{background:var(--surface-2)}
+.file-item.is-current{background:var(--accent-soft);border-color:var(--accent-border)}
+.file-item__ic{color:var(--muted);margin-top:2px}
+.file-item.is-current .file-item__ic{color:var(--accent)}
+.file-item__txt{flex:1;min-width:0}
+.file-item__name{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-item.is-current .file-item__name{color:var(--accent)}
+.file-item__meta{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.file-item__del{opacity:0;width:20px;height:20px;flex:none;display:grid;place-items:center;border:0;border-radius:var(--r-xs);background:transparent;color:var(--muted);cursor:pointer}
+.file-item:hover .file-item__del,.file-item:focus-within .file-item__del{opacity:1}
+.file-item__del:hover{background:var(--danger-soft);color:var(--danger)}
+.file-new{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:32px;margin-bottom:6px;border:1px dashed var(--border-strong);border-radius:var(--r-sm);background:transparent;color:var(--text-2);font-size:var(--fs-xs);font-weight:600;cursor:pointer;transition:border-color var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.file-new:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+/* 全屏：左侧 240px 文件栏 */
+.nb--wide{flex-direction:row;min-height:620px}
+.nb-sidebar{width:var(--nav-w);flex:none;display:flex;flex-direction:column;background:var(--surface-2);border-right:1px solid var(--border);padding:var(--sp-4) var(--sp-3)}
+.nb-sidebar__head{display:flex;align-items:center;gap:6px;padding:0 6px var(--sp-3);font-size:var(--fs-xs);font-weight:650;color:var(--text-2)}
+.nb-sidebar__head span{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--muted);font-weight:400}
+.nb-sidebar__foot{margin-top:auto;padding:10px 6px 0;border-top:1px solid var(--border);font-size:10px;color:var(--muted);line-height:1.6;display:flex;gap:6px;align-items:flex-start}
+.nb-sidebar__foot .ic{margin-top:1px}
+
+/* 整页书写区（无边框、无卡片阴影） */
+.editor{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--surface)}
+.editor__bar{display:flex;align-items:center;gap:8px;height:44px;flex:none;padding:0 26px;border-bottom:1px solid var(--border);background:var(--surface)}
+.editor__name{font-size:var(--fs-xs);font-weight:600;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.editor__sep{width:1px;height:14px;background:var(--border)}
+.editor__meta{font-size:var(--fs-micro);color:var(--muted);white-space:nowrap}
+.editor__bar .sp{flex:1}
+.editor__bar .btn{border-color:transparent;background:transparent;color:var(--muted);height:28px;font-size:var(--fs-xs)}
+.editor__bar .btn:hover{background:var(--surface-3);color:var(--text)}
+.editor__page{flex:1;min-height:0;padding:30px 34px 60px;overflow:auto}
+.editor__title{width:100%;border:0;outline:0;background:transparent;font-size:var(--fs-2xl);font-weight:650;letter-spacing:-.4px;color:var(--text);margin:0 0 18px}
+.editor__title::placeholder{color:var(--border-strong)}
+.editor__body{font-size:var(--fs-base);line-height:1.95;color:var(--text-2)}
+.editor__body h4{font-size:var(--fs-sm);font-weight:650;color:var(--text);margin:20px 0 8px}
+.editor__body h4:first-child{margin-top:0}
+.editor__body p{margin:0 0 6px}
+.editor__body ol{margin:0 0 8px;padding-left:20px}
+.editor__body li{margin-bottom:4px}
+.editor__body .mono-line{font-family:var(--font-mono);font-size:12.5px;line-height:1.9;color:var(--text-2);margin:0}
+.editor__body .mono-line span{color:var(--muted)}
+.editor__caret{display:inline-block;width:1.5px;height:15px;vertical-align:-2px;background:var(--accent);margin-left:2px;animation:blink 1.1s steps(1,end) infinite}
+@keyframes blink{50%{opacity:0}}
+/* 窄栏书写区 */
+.nb--narrow .editor__bar{padding:0 14px}
+.nb--narrow .editor__page{padding:22px 18px 48px}
+.nb--narrow .editor__title{font-size:var(--fs-xl)}
+.nb--narrow .editor__body{font-size:var(--fs-sm)}
+.nb--narrow .editor__meta{display:none}
+
+/* ============================================================
+   7. 状态与反馈
+   ============================================================ */
+.state-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-4)}
+.state{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow-xs);transition:box-shadow var(--dur-base) var(--ease)}
+.state:hover{box-shadow:var(--shadow-md)}
+.state__head{display:flex;align-items:center;gap:var(--sp-2);padding:10px var(--sp-4);border-bottom:1px solid var(--border)}
+.state__no{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:var(--r-xs);padding:2px 6px}
+.state__name{font-size:var(--fs-xs);font-weight:650;color:var(--text)}
+.state__en{font-size:10px;color:var(--muted);margin-left:auto;letter-spacing:.5px}
+.state__demo{background:var(--surface-2);padding:var(--sp-4);min-height:132px;display:flex;flex-direction:column;justify-content:center;gap:9px}
+.state__note{margin:0;padding:9px var(--sp-4) 11px;font-size:var(--fs-micro);line-height:1.65;color:var(--muted)}
+
+.mini-card{position:relative;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:9px 10px;box-shadow:var(--shadow-sm)}
+.mini-card__ops{display:flex;gap:4px;justify-content:flex-end;margin-bottom:6px}
+.mini-op{width:21px;height:21px;display:grid;place-items:center;border:1px solid var(--accent-border);border-radius:var(--r-xs);background:var(--accent-soft);color:var(--accent)}
+.mini-op .ic{width:12px;height:12px}
+.mini-card__t{font-size:11px;font-weight:650;margin-bottom:4px}
+.mini-card__x{font-family:var(--font-mono);font-size:10px;color:var(--muted);line-height:1.6}
+.mini-menu{display:flex;gap:8px}
+.mini-menu ul{list-style:none;margin:0;padding:4px;min-width:118px;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-sm);box-shadow:var(--shadow-pop)}
+.mini-menu li{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:var(--r-xs);font-size:10px;color:var(--text-2)}
+.mini-menu li.danger{color:var(--danger)}
+.mini-menu .tag{font-size:9px;color:var(--muted);align-self:center;line-height:1.5}
+
+.fake-input{position:relative;display:flex;align-items:center;height:36px;padding:0 11px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--r-sm);box-shadow:0 0 0 3px var(--accent-ring);font-size:var(--fs-xs);color:var(--text)}
+.fake-input .ic{color:var(--accent);margin-right:7px}
+.fake-input .caret{width:1.5px;height:15px;background:var(--accent);margin-left:2px;animation:blink 1.1s steps(1,end) infinite}
+.hint-row{display:flex;gap:6px;flex-wrap:wrap}
+.hint{font-size:10px;color:var(--text-2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-pill);padding:3px 9px}
+
+.hit-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 10px;font-family:var(--font-mono);font-size:11px;line-height:1.95;color:var(--text-2)}
+.hit-box .k{color:var(--muted)}
+mark{background:var(--highlight);color:var(--highlight-ink);border-radius:3px;padding:0 2px;font-weight:600}
+.hit-query{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--accent-border);border-radius:var(--r-sm);padding:6px 10px;font-size:var(--fs-xs)}
+.hit-query .ic{color:var(--accent)}
+.hit-query b{color:var(--accent);font-weight:650}
+.state__demo--center{align-items:center;justify-content:center}
+.state__demo .toast{box-shadow:var(--shadow-md)}
+.toast{display:inline-flex;align-items:center;gap:8px;background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok-border);border-radius:var(--r-pill);padding:9px 15px;font-size:var(--fs-sm);font-weight:600;box-shadow:var(--shadow-pop)}
+.toast .ic{color:var(--ok)}
+.float-toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;animation:toastIn var(--dur-slow) var(--ease) both}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.empty{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 0;text-align:center;color:var(--muted)}
+.empty .ic{width:26px;height:26px;color:var(--border-strong)}
+.empty strong{font-size:var(--fs-sm);color:var(--text-2);font-weight:600}
+.empty span{font-size:var(--fs-xs)}
+.empty__alt{margin-top:2px;font-size:10px;color:var(--border-strong)}
+
+.loading-line{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--muted)}
+.loading-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:softPulse 1.6s ease-in-out infinite}
+.sk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sk{height:34px;border-radius:5px;background:var(--surface-3);animation:softPulse 1.6s ease-in-out infinite}
+.sk:nth-child(3n){height:44px}
+.sk:nth-child(4n){height:26px}
+@keyframes softPulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ============================================================
+   8. 设计说明 / 页脚
+   ============================================================ */
+.doc-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp-5)}
+.doc-col h4{margin:0 0 var(--sp-3);font-size:var(--fs-sm);font-weight:650;color:var(--text);display:flex;align-items:center;gap:7px}
+.doc-col h4 .ic{color:var(--accent)}
+.doc-col p,.doc-col li{font-size:var(--fs-xs);line-height:1.8;color:var(--text-2)}
+.doc-col p{margin:0 0 var(--sp-3)}
+.doc-col ul{margin:0;padding-left:16px}
+.doc-col li{margin-bottom:7px}
+.doc-col li b{color:var(--text);font-weight:650}
+.qa{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-4);margin-top:var(--sp-6);padding-top:var(--sp-6);border-top:1px solid var(--border)}
+.qa-card{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r-sm);padding:var(--sp-4)}
+.qa-card__tag{display:inline-block;font-family:var(--font-mono);font-size:10px;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--r-pill);padding:2px 9px;margin-bottom:var(--sp-2)}
+.qa-card h5{margin:0 0 var(--sp-2);font-size:var(--fs-sm);font-weight:650;color:var(--text);line-height:1.5}
+.qa-card p{margin:0 0 var(--sp-2);font-size:var(--fs-xs);line-height:1.8;color:var(--text-2)}
+.qa-card p:last-child{margin-bottom:0}
+.qa-card b{color:var(--accent)}
+.qa-card .no{color:var(--danger);font-weight:650}
+.doc-foot{display:flex;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;padding:var(--sp-2) var(--sp-1) 0;font-size:var(--fs-micro);color:var(--muted)}
+
+@media (max-width:1080px){
+  .tok-grid{grid-template-columns:1fr}
+  .state-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .doc-cols,.qa{grid-template-columns:1fr}
+  .app--wide .stickies{columns:3}
+}
+@media (max-width:680px){
+  .canvas{padding:var(--sp-5) var(--sp-3) var(--sp-10)}
+  .doc-section{padding:var(--sp-5)}
+  .swatches{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .state-grid{grid-template-columns:1fr}
+  .resp-strip{grid-template-columns:1fr}
+  .app--wide .stickies{columns:2}
+  .nb--wide{flex-direction:column}
+  .nb-sidebar{width:100%;border-right:0;border-bottom:1px solid var(--border)}
+}
+</style>
+</head>
+<body>
+
+<!-- 内联 SVG 图标 sprite（无外部资源） -->
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+  <symbol id="i-logo" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="3.5"/><path d="M8 9h8M8 13h8M8 17h4"/></symbol>
+  <symbol id="i-stickies" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 12h6M9 16h4"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M13 5h6v6M19 5l-9 9M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="M15.5 15.5L20 20"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15.2" r="3.2"/><path d="M10.4 12.9L19 4.3M16.2 7.1l2 2M14 9.3l2 2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.3"/><path d="M12 7.5V12l3 1.8"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.3"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.5L12 12.5 3.5 8zM3.5 12.5L12 17l8.5-4.5M3.5 16.5L12 21l8.5-4.5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2l7 2.6v5.4c0 4.5-2.9 7.8-7 9.6-4.1-1.8-7-5.1-7-9.6V5.8z"/><path d="M9.2 12l2 2 3.6-3.8"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></symbol>
+</defs></svg>
+
+<div class="canvas">
+
+  <!-- ============ 抬头 ============ -->
+  <header class="doc-section doc-head">
+    <span class="kicker">视觉设计提案 · v3.1 双模块改版</span>
+    <div class="doc-head__row">
+      <div>
+        <h1 class="doc-head__title">便签本 · Sticky <small>静态视觉设计稿</small></h1>
+        <p class="doc-head__sub">两个模块：便签（小卡片瀑布网格）／记事本（整页编辑器）· 侧栏与全屏双视图</p>
+      </div>
+      <div class="meta">
+        <b>版本</b><span>v3.1 双模块改版</span>
+        <b>日期</b><span>2026-11-13</span>
+        <b>载体</b><span>sidepanel.html / index.html</span>
+        <b>主题</b><span>浅色 · 微暖纸感</span>
+        <b>状态</b><span>待评审，未落地实现</span>
+      </div>
+    </div>
+    <div class="callout">
+      <svg class="ic ic--sm"><use href="#i-info"/></svg>
+      <div><strong>示意数据声明：</strong>8 张便签（pyxis / apisix / canal / laf / Alert / Monitor / Log server / rocketMq）与 4 篇记事本文档均为设计示意，密码一律为脱敏占位值（<code class="code">Poc@Meta_0•••</code> / <code class="code">••••••••</code>），不含任何真实明文凭证。本稿为纯静态单文件 HTML，无脚本、无外链，所有按钮仅作展示、点击不产生行为；稿中不实现「便签转文档」等任何新增功能。</div>
+    </div>
+  </header>
+
+  <!-- ============ 00 设计系统 ============ -->
+  <section class="doc-section">
+    <div class="sec-head">
+      <div class="sec-head__no">00</div>
+      <div class="sec-head__txt">
+        <h2 class="sec-head__title">设计系统 <span>沿用上一版，保持一致</span></h2>
+        <p class="sec-head__desc">微暖纸感底 + 靛蓝墨主色；完整变量表见本文件顶部 HTML 注释，可直接抄进 <code class="code">:root</code>。新增 4 个布局变量。</p>
+      </div>
+      <span class="pill">CSS 变量 / 4px 基准</span>
+    </div>
+
+    <div class="tok-grid">
+      <div class="tok-panel">
+        <p class="tok-panel__label">配色 · 主色 / 中性 / 语义</p>
+        <div class="swatches">
+          <div class="sw"><div class="sw__chip" style="background:#3b5bdb"></div><div class="sw__meta"><span class="sw__name">--accent</span><span class="sw__hex">#3b5bdb</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#2f4cc4"></div><div class="sw__meta"><span class="sw__name">--accent-hover</span><span class="sw__hex">#2f4cc4</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#eef1fd"></div><div class="sw__meta"><span class="sw__name">--accent-soft</span><span class="sw__hex">#eef1fd</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#f8f8f6"></div><div class="sw__meta"><span class="sw__name">--bg 纸感底</span><span class="sw__hex">#f8f8f6</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#ffffff"></div><div class="sw__meta"><span class="sw__name">--surface</span><span class="sw__hex">#ffffff</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#1b2430"></div><div class="sw__meta"><span class="sw__name">--text</span><span class="sw__hex">#1b2430</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#8a94a3"></div><div class="sw__meta"><span class="sw__name">--muted</span><span class="sw__hex">#8a94a3</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#e5e9f0"></div><div class="sw__meta"><span class="sw__name">--border</span><span class="sw__hex">#e5e9f0</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#c23b33"></div><div class="sw__meta"><span class="sw__name">--danger</span><span class="sw__hex">#c23b33</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#fcf0ef"></div><div class="sw__meta"><span class="sw__name">--danger-soft</span><span class="sw__hex">#fcf0ef</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#12805a"></div><div class="sw__meta"><span class="sw__name">--ok</span><span class="sw__hex">#12805a</span></div></div>
+          <div class="sw"><div class="sw__chip" style="background:#fff2b8"></div><div class="sw__meta"><span class="sw__name">--highlight</span><span class="sw__hex">#fff2b8</span></div></div>
+        </div>
+        <p class="tok-note">语义色仅用于危险 / 成功反馈与搜索命中；主色只出现在主按钮、当前项、分段选中态、focus 光环与「复制密码」强调态。</p>
+      </div>
+
+      <div class="tok-panel">
+        <p class="tok-panel__label">字号阶梯 · 间距 · 圆角 · 阴影</p>
+        <div class="type-scale">
+          <div class="type-row"><span class="type-row__sample" style="font-size:11px">辅助文字 / 更新时间 / 字数</span><span class="type-row__tag">--fs-micro 11</span></div>
+          <div class="type-row"><span class="type-row__sample" style="font-size:13px">按钮与说明文字</span><span class="type-row__tag">--fs-sm 13</span></div>
+          <div class="type-row"><span class="type-row__sample" style="font-size:14px">界面正文 / 书写区</span><span class="type-row__tag">--fs-base 14</span></div>
+          <div class="type-row"><span class="type-row__sample" style="font-size:15px;font-weight:650">卡片标题 / 文件名</span><span class="type-row__tag">--fs-md 15 / 650</span></div>
+          <div class="type-row"><span class="type-row__sample" style="font-size:22px;font-weight:650">区块标题</span><span class="type-row__tag">--fs-xl 22</span></div>
+          <div class="type-row"><span class="type-row__sample" style="font-size:28px;font-weight:700">文档标题</span><span class="type-row__tag">--fs-2xl 28 / 700</span></div>
+        </div>
+        <div class="spec-row">
+          <div class="spec"><div class="spec__box" style="width:34px;height:22px;border-radius:6px"></div>r-xs 6</div>
+          <div class="spec"><div class="spec__box" style="width:34px;height:22px;border-radius:9px"></div>r-sm 9</div>
+          <div class="spec"><div class="spec__box" style="width:34px;height:22px;border-radius:12px"></div>r-md 12</div>
+          <div class="spec"><div class="spec__box" style="width:34px;height:22px;border-radius:999px"></div>r-pill</div>
+        </div>
+        <div class="spec-row">
+          <div class="spec"><div class="spec__box" style="width:44px;height:20px;border-radius:4px;box-shadow:var(--shadow-sm)"></div>shadow-sm</div>
+          <div class="spec"><div class="spec__box" style="width:44px;height:20px;border-radius:4px;box-shadow:var(--shadow-lg)"></div>shadow-lg</div>
+          <div class="spec"><div class="spec__box" style="width:44px;height:20px;border-radius:4px;box-shadow:var(--shadow-pop)"></div>shadow-pop</div>
+          <div class="spec"><div class="spec__box" style="width:44px;height:20px;border-radius:4px;box-shadow:0 0 0 3px var(--accent-ring)"></div>focus ring</div>
+        </div>
+        <p class="tok-note">新增布局变量：<code class="code">--nav-w 240px</code>（全屏文件栏）、<code class="code">--topbar-h 52px</code>、<code class="code">--seg-h 32px</code>、<code class="code">--card-min 150px</code>。间距 4/8/12/16/20/24/32/40/48；动效 120/180/260ms。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 01 共用顶栏与切换器 ============ -->
+  <section class="doc-section">
+    <div class="sec-head">
+      <div class="sec-head__no">01</div>
+      <div class="sec-head__txt">
+        <h2 class="sec-head__title">共用顶栏与模块切换 <span>顶部一级分段切换器</span></h2>
+        <p class="sec-head__desc">选顶部切换而非左侧导航；两个模块共用同一根 52px 顶栏，切换不会增加侧栏的纵向占用。选择理由见第 05 节。</p>
+      </div>
+      <span class="pill">单行 52px · 恒定高度</span>
+    </div>
+
+    <div class="view-split">
+      <div>
+        <div class="bar-sample bar-sample--narrow">
+          <div class="topbar">
+            <span class="brand" title="便签本 · Sticky"><span class="brand__mark"><svg class="ic"><use href="#i-logo"/></svg></span></span>
+            <div class="seg">
+              <button class="seg__item is-active" type="button"><svg class="ic ic--sm"><use href="#i-stickies"/></svg>便签 <span class="seg__count">8</span></button>
+              <button class="seg__item" type="button"><svg class="ic ic--sm"><use href="#i-doc"/></svg>记事本</button>
+            </div>
+            <span class="topbar__spacer"></span>
+            <button class="btn btn--bare btn--icon" type="button" title="全屏打开"><svg class="ic ic--sm"><use href="#i-expand"/></svg></button>
+          </div>
+          <div class="bar-sample__foot"><svg class="ic ic--sm" style="width:12px;height:12px"><use href="#i-info"/></svg>窄栏：只留品牌方块，产品名让位给切换器；张数徽章并入「便签 8」</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:320px">
+        <div class="bar-sample bar-sample--wide">
+          <div class="topbar">
+            <span class="brand"><span class="brand__mark"><svg class="ic"><use href="#i-logo"/></svg></span><span class="brand__name">便签本 <em>· Sticky</em></span></span>
+            <div class="seg" style="margin-left:14px">
+              <button class="seg__item is-active" type="button"><svg class="ic ic--sm"><use href="#i-stickies"/></svg>便签 <span class="seg__count">8</span></button>
+              <button class="seg__item" type="button"><svg class="ic ic--sm"><use href="#i-doc"/></svg>记事本</button>
+            </div>
+            <span class="topbar__spacer"></span>
+            <button class="btn btn--ghost btn--sm" type="button"><svg class="ic ic--sm"><use href="#i-expand"/></svg>全屏打开</button>
+          </div>
+          <div class="bar-sample__foot"><svg class="ic ic--sm" style="width:12px;height:12px"><use href="#i-info"/></svg>宽屏：产品名 + 分段切换器 + 全屏打开，仍是同一根顶栏；切换器在激活态带白底与微阴影</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wide-note">
+      <div class="wide-note__item"><b>切换即换布局</b>便签 → 小卡片瀑布网格；记事本 → 整页编辑器。不是换标题，两套主体结构完全不同。</div>
+      <div class="wide-note__item"><b>张数徽章并入标签</b>「便签 8」把计数做成激活标签内的小数字，省掉一个独立徽章元素，窄栏也不挤。</div>
+      <div class="wide-note__item"><b>高度恒定</b>两个模块的顶栏都锁 52px（宽屏 56px），sticky 吸顶时只占这一行；工具条属于各模块必需操作，不因切换器新增。</div>
+      <div class="wide-note__item"><b>键盘可达</b>分段项用 <code class="code">:focus-visible</code> 主色光环，激活态白底 + <code class="code">--shadow-xs</code>，与卡片语言一致。</div>
+    </div>
+  </section>
+
+  <!-- ============ 02 便签模块 ============ -->
+  <section class="doc-section">
+    <div class="sec-head">
+      <div class="sec-head__no">02</div>
+      <div class="sec-head__txt">
+        <h2 class="sec-head__title">便签模块 <span>小卡片 n*n 瀑布网格</span></h2>
+        <p class="sec-head__desc">卡片只放标题 + 2–4 行摘要，超出省略；操作收进 hover 角标与「⋯」菜单；点击卡片才进入编辑。8 张示意便签，密码全脱敏。</p>
+      </div>
+      <span class="pill">示意数据 · 8 张</span>
+    </div>
+
+    <div class="subhead">侧栏窄视图 <span>380px · 2 列瀑布 · 纵向滚动</span></div>
+    <div class="view-split">
+      <div class="panel-wrap">
+        <div class="frame frame--side">
+          <div class="frame__cap"><span class="frame__dots"><i></i><i></i><i></i></span><span class="frame__cap-label">sidepanel.html</span><span class="frame__tag">示意数据</span></div>
+          <div class="frame__body">
+            <div class="app">
+              <div class="topbar">
+                <span class="brand" title="便签本 · Sticky"><span class="brand__mark"><svg class="ic"><use href="#i-logo"/></svg></span></span>
+                <div class="seg"><button class="seg__item is-active" type="button"><svg class="ic ic--sm"><use href="#i-stickies"/></svg>便签 <span class="seg__count">8</span></button><button class="seg__item" type="button"><svg class="ic ic--sm"><use href="#i-doc"/></svg>记事本</button></div>
+                <span class="topbar__spacer"></span>
+                <button class="btn btn--bare btn--icon" type="button" title="全屏打开"><svg class="ic ic--sm"><use href="#i-expand"/></svg></button>
+              </div>
+              <div class="toolbar">
+                <label class="search"><svg class="ic ic--sm"><use href="#i-search"/></svg><input type="text" placeholder="搜索便签，空格分隔多词" /></label>
+                <button class="btn btn--primary btn--add" type="button" title="新建便签">＋</button>
+              </div>
+              <div class="app__body">
+                <div class="grid-meta"><span class="dot"></span>输入即存 · 本地明文<span>8 张 / 2 列</span></div>
+                <div class="stickies">
+
+                  <article class="sticky is-hover">
+                    <div class="sticky__ops">
+                      <button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button>
+                      <button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button>
+                      <button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button>
+                    </div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">pyxis</h3>
+                    <div class="sticky__excerpt">地址： https://pyxis.internal.dev
+账号： ops_admin
+密码： Poc@Meta_0•••
+备注： 控制台入口，跳板机网段可访问</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-13 14:32</div>
+                  </article>
+
+                  <article class="sticky">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">apisix</h3>
+                    <div class="sticky__excerpt">地址： https://apisix-gw.internal.dev
+账号： gateway
+密码： ••••••••</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-13 11:08</div>
+                  </article>
+
+                  <article class="sticky is-active">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">canal</h3>
+                    <div class="sticky__excerpt">地址： 10.24.8.31:11111
+账号： canal
+密码： Poc@Meta_0•••
+备注： 只同步 order 库，勿改 binlog 位点</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-12 18:45</div>
+                    <div class="sticky__menu">
+                      <button class="sticky__menu-item" type="button"><svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文</button>
+                      <button class="sticky__menu-item" type="button"><svg class="ic ic--sm"><use href="#i-key"/></svg>复制密码</button>
+                      <div class="sticky__menu-sep"></div>
+                      <button class="sticky__menu-item sticky__menu-item--danger" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg>删除</button>
+                    </div>
+                  </article>
+
+                  <article class="sticky">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">laf</h3>
+                    <div class="sticky__excerpt">地址： https://laf.console.dev
+账号： dev@local
+密码： ••••••••</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-12 09:20</div>
+                  </article>
+
+                  <article class="sticky">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">Alert</h3>
+                    <div class="sticky__excerpt">地址： https://alert.internal.dev
+账号： alert_ro
+密码： Poc@Meta_0•••
+备注： 告警静默走 /silence，勿用 admin</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-11 16:02</div>
+                  </article>
+
+                  <article class="sticky">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">Monitor</h3>
+                    <div class="sticky__excerpt">地址： https://monitor.internal.dev
+账号： viewer
+密码： ••••••••</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-11 10:37</div>
+                  </article>
+
+                  <article class="sticky">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">Log server</h3>
+                    <div class="sticky__excerpt">地址： ssh://10.24.9.7
+账号： logops
+密码： Poc@Meta_0•••
+备注： 索引保留 7 天</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-10 20:14</div>
+                  </article>
+
+                  <article class="sticky">
+                    <div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div>
+                    <span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span>
+                    <h3 class="sticky__title">rocketMq</h3>
+                    <div class="sticky__excerpt">地址： 10.24.10.15:9876
+账号： mq_admin
+密码： ••••••••</div>
+                    <div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-10 15:51</div>
+                  </article>
+
+                </div>
+                <div class="app-footer">
+                  <div class="risk"><svg class="ic ic--sm"><use href="#i-info"/></svg><p>便签以明文保存在本机 Chrome 里，不加密、不联网、不同步；本机任何人打开即可查看或修改。请只放开发 / 测试信息。</p></div>
+                  <div class="app-footer__actions"><button class="btn btn--danger btn--sm" type="button">清空全部便签</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="toast float-toast"><svg class="ic ic--sm"><use href="#i-check"/></svg>已复制密码</div>
+      </div>
+
+      <div class="view-notes">
+        <h4>窄栏便签要点</h4>
+        <p>380px 内降到 2 列，卡片约 165px，仍可一眼扫过 8 张。</p>
+        <ul class="point-list">
+          <li><span class="point-list__no">1</span><div><b>卡片明显变小。</b>只留标题 + 2–4 行摘要，超出用 <code class="code">-webkit-line-clamp</code> 省略；地址/账号/密码行仍等宽对齐。</div></li>
+          <li><span class="point-list__no">2</span><div><b>操作不溢出。</b>复制全文、复制密码、删除全部收进 hover / focus 才淡入的角标，以及「⋯」菜单（图中 canal 卡片为菜单展开态）。</div></li>
+          <li><span class="point-list__no">3</span><div><b>复制密码仍一眼可见。</b>角标里的钥匙按钮用主色浅底；<code class="code">密码：</code> 不存在时该项不渲染。</div></li>
+          <li><span class="point-list__no">4</span><div><b>更新时间压到一行。</b>底部细分隔线 + 时钟图标 + 日期，不占操作行。</div></li>
+          <li><span class="point-list__no">5</span><div><b>工具条回到一行。</b>搜索框 + 34px 方形「＋」按钮，比上一版两行更省纵向空间。</div></li>
+          <li><span class="point-list__no">6</span><div><b>点击才编辑。</b>pyxis 卡片为 hover 态、canal 卡片为选中 + 菜单展开态；完整编辑态见下方浮层示例。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="subhead">全屏宽视图 <span>1200px · 4 列瀑布 · 同一套卡片组件</span></div>
+    <div class="panel-wrap" style="width:1200px">
+      <div class="frame frame--wide">
+        <div class="frame__cap"><span class="frame__dots"><i></i><i></i><i></i></span><span class="frame__cap-label">index.html</span><span class="frame__tag">示意数据 · 共 8 张</span></div>
+        <div class="frame__body">
+          <div class="app app--wide">
+            <div class="topbar">
+              <span class="brand"><span class="brand__mark"><svg class="ic"><use href="#i-logo"/></svg></span><span class="brand__name">便签本 <em>· Sticky</em></span></span>
+              <div class="seg" style="margin-left:14px"><button class="seg__item is-active" type="button"><svg class="ic ic--sm"><use href="#i-stickies"/></svg>便签 <span class="seg__count">8</span></button><button class="seg__item" type="button"><svg class="ic ic--sm"><use href="#i-doc"/></svg>记事本</button></div>
+              <span class="topbar__spacer"></span>
+              <button class="btn btn--ghost btn--sm" type="button"><svg class="ic ic--sm"><use href="#i-expand"/></svg>全屏打开</button>
+            </div>
+            <div class="toolbar">
+              <label class="search"><svg class="ic ic--sm"><use href="#i-search"/></svg><input type="text" placeholder="搜索便签，空格分隔多词" /></label>
+              <button class="btn btn--primary" type="button"><svg class="ic ic--sm"><use href="#i-plus"/></svg>＋ 新建便签</button>
+            </div>
+            <div class="app__body">
+              <div class="grid-meta"><span class="dot"></span>输入即存 · 本地明文<span>8 张 / 4 列</span></div>
+              <div class="stickies">
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">pyxis</h3><div class="sticky__excerpt">地址： https://pyxis.internal.dev
+账号： ops_admin
+密码： Poc@Meta_0•••
+备注： 控制台入口，跳板机网段可访问</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-13 14:32</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">apisix</h3><div class="sticky__excerpt">地址： https://apisix-gw.internal.dev
+账号： gateway
+密码： ••••••••</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-13 11:08</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">canal</h3><div class="sticky__excerpt">地址： 10.24.8.31:11111
+账号： canal
+密码： Poc@Meta_0•••
+备注： 只同步 order 库，勿改 binlog 位点</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-12 18:45</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">laf</h3><div class="sticky__excerpt">地址： https://laf.console.dev
+账号： dev@local
+密码： ••••••••</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-12 09:20</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">Alert</h3><div class="sticky__excerpt">地址： https://alert.internal.dev
+账号： alert_ro
+密码： Poc@Meta_0•••
+备注： 告警静默走 /silence，勿用 admin</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-11 16:02</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">Monitor</h3><div class="sticky__excerpt">地址： https://monitor.internal.dev
+账号： viewer
+密码： ••••••••</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-11 10:37</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">Log server</h3><div class="sticky__excerpt">地址： ssh://10.24.9.7
+账号： logops
+密码： Poc@Meta_0•••
+备注： 索引保留 7 天</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-10 20:14</div></article>
+
+                <article class="sticky"><div class="sticky__ops"><button class="sticky__op" type="button" title="复制全文"><svg class="ic"><use href="#i-copy"/></svg></button><button class="sticky__op sticky__op--key" type="button" title="复制密码"><svg class="ic"><use href="#i-key"/></svg></button><button class="sticky__op" type="button" title="更多操作"><svg class="ic"><use href="#i-dots"/></svg></button></div><span class="sticky__ops-hint"><svg class="ic ic--sm"><use href="#i-dots"/></svg></span><h3 class="sticky__title">rocketMq</h3><div class="sticky__excerpt">地址： 10.24.10.15:9876
+账号： mq_admin
+密码： ••••••••</div><div class="sticky__foot"><svg class="ic" style="width:11px;height:11px"><use href="#i-clock"/></svg>11-10 15:51</div></article>
+
+              </div>
+              <div class="app-footer">
+                <div class="risk"><svg class="ic ic--sm"><use href="#i-info"/></svg><p>便签以明文保存在本机 Chrome 里，不加密、不联网、不同步；本机任何人打开即可查看或修改。请只放开发 / 测试信息。</p></div>
+                <div class="app-footer__actions"><button class="btn btn--danger btn--sm" type="button">清空全部便签</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subhead">响应式列数对照 <span>同一份卡片，按容器宽度自动降列</span></div>
+    <div class="resp-strip">
+      <div class="resp-item"><div class="resp-item__head"><b>2 列</b><span>≤ 420px · 侧栏</span></div><div class="resp-grid resp-grid--2"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>约 165px / 张；摘要 2–4 行截断，角标 hover 才出现。更窄的侧栏可降为 1 列。</p></div>
+      <div class="resp-item"><div class="resp-item__head"><b>3 列</b><span>420–1100px · 中宽</span></div><div class="resp-grid resp-grid--3"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>过渡档；卡片约 230px，摘要可显示更多地址，无需改组件。</p></div>
+      <div class="resp-item"><div class="resp-item__head"><b>4 列</b><span>≥ 1100px · 全屏</span></div><div class="resp-grid resp-grid--4"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>约 275px / 张；8 张两行铺满，一眼扫完，留白舒适。</p></div>
+    </div>
+
+    <div class="subhead">点击卡片后的编辑态 <span>详情浮层 · 静态示例</span></div>
+    <div class="detail-stage">
+      <div class="detail-ghost"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="detail-veil">
+        <div class="detail">
+          <div class="detail__head"><svg class="ic ic--sm" style="color:var(--accent)"><use href="#i-stickies"/></svg><b>编辑便签</b><span class="sp"></span><span>输入即存 · 无保存按钮</span><button class="btn btn--bare btn--icon" type="button" title="关闭" style="height:24px;width:24px"><svg class="ic ic--sm"><use href="#i-close"/></svg></button></div>
+          <input class="detail__title" type="text" value="pyxis" placeholder="标题（留空自动取正文首行）" />
+          <textarea class="detail__body" spellcheck="false">地址： https://pyxis.internal.dev
+账号： ops_admin
+密码： Poc@Meta_0•••
+备注： 控制台入口，跳板机网段可访问</textarea>
+          <div class="detail__foot">
+            <span class="t"><svg class="ic" style="width:12px;height:12px"><use href="#i-clock"/></svg>更新 11-13 14:32</span><span class="sp"></span>
+            <button class="btn" type="button"><svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文</button>
+            <button class="btn btn--accent" type="button"><svg class="ic ic--sm"><use href="#i-key"/></svg>复制密码</button>
+            <button class="btn btn--danger" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg>删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 03 记事本模块 ============ -->
+  <section class="doc-section">
+    <div class="sec-head">
+      <div class="sec-head__no">03</div>
+      <div class="sec-head__txt">
+        <h2 class="sec-head__title">记事本模块 <span>整页都是编辑器</span></h2>
+        <p class="sec-head__desc">文件列表（当前项高亮 / 新建 / 删除）+ 占据剩余全部宽高的书写区；纯白无边框，顶部只有极轻工具条，不用卡片把编辑区框起来。</p>
+      </div>
+      <span class="pill">示意数据 · 4 篇文档</span>
+    </div>
+
+    <div class="subhead">侧栏窄视图 <span>380px · 文件列表收成顶部下拉 · 整页书写区</span></div>
+    <div class="view-split">
+      <div class="panel-wrap">
+        <div class="frame frame--side">
+          <div class="frame__cap"><span class="frame__dots"><i></i><i></i><i></i></span><span class="frame__cap-label">sidepanel.html</span><span class="frame__tag">示意数据</span></div>
+          <div class="frame__body">
+            <div class="app">
+              <div class="topbar">
+                <span class="brand" title="便签本 · Sticky"><span class="brand__mark"><svg class="ic"><use href="#i-logo"/></svg></span></span>
+                <div class="seg"><button class="seg__item" type="button"><svg class="ic ic--sm"><use href="#i-stickies"/></svg>便签 <span class="seg__count">8</span></button><button class="seg__item is-active" type="button"><svg class="ic ic--sm"><use href="#i-doc"/></svg>记事本</button></div>
+                <span class="topbar__spacer"></span>
+                <button class="btn btn--bare btn--icon" type="button" title="全屏打开"><svg class="ic ic--sm"><use href="#i-expand"/></svg></button>
+              </div>
+
+              <!-- 文件切换与工具条合并为一行 -->
+              <div class="nb-bar">
+                <button class="nb-select" type="button"><svg class="ic ic--sm"><use href="#i-file"/></svg><span class="lbl">发布前检查清单</span><svg class="ic ic--sm chev"><use href="#i-chevron"/></svg></button>
+                <span class="nb-meta">1,284 字</span>
+                <button class="btn btn--icon" type="button" title="复制全文"><svg class="ic ic--sm"><use href="#i-copy"/></svg></button>
+                <button class="btn btn--icon" type="button" title="更多"><svg class="ic ic--sm"><use href="#i-dots"/></svg></button>
+              </div>
+
+              <!-- 下拉展开态：静态浮层，展示完整文件列表信息 -->
+              <div class="nb-dropdown">
+                <div class="nb-dropdown__head">切换文档<span class="sp"></span>4 篇</div>
+                <button class="file-new" type="button"><svg class="ic ic--sm"><use href="#i-plus"/></svg>＋ 新建文档</button>
+                <div class="file-list">
+                  <div class="file-item is-current"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">发布前检查清单</span><span class="file-item__meta">1,284 字 · 11-13 14:32</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                  <div class="file-item"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">周会记录</span><span class="file-item__meta">320 字 · 11-12 09:10</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                  <div class="file-item"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">临时命令备忘</span><span class="file-item__meta">86 字 · 11-10 18:22</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                  <div class="file-item"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">API 联调记录</span><span class="file-item__meta">612 字 · 11-08 15:47</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                </div>
+              </div>
+
+              <div class="nb nb--narrow" style="min-height:520px">
+                <div class="editor">
+                  <div class="editor__page">
+                    <div class="editor__title">发布前检查清单</div>
+                    <div class="editor__body">
+                      <h4>一、环境信息</h4>
+                      <p class="mono-line"><span>地址：</span>https://pyxis.internal.dev</p>
+                      <p class="mono-line"><span>账号：</span>ops_admin</p>
+                      <p class="mono-line"><span>密码：</span>Poc@Meta_0•••</p>
+                      <h4>二、发布顺序</h4>
+                      <ol><li>先确认 canal 同步位点无滞后，再切网关流量。</li><li>观察 Alert 面板 15 分钟，无新增告警再继续。</li><li>rocketMq 消费堆积清零后收尾。</li></ol>
+                      <h4>三、回滚</h4>
+                      <p>脚本在跳板机 /opt/rollback/ 下，执行前二次确认<span class="editor__caret"></span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-notes">
+        <h4>窄栏记事本要点</h4>
+        <p>文件列表不占纵向：压成一行下拉，展开时以浮层呈现。</p>
+        <ul class="point-list">
+          <li><span class="point-list__no">1</span><div><b>切换与工具条合并成一行。</b>「文件名 ▾ + 字数 + 复制 + 更多」共 40px，没有额外的文件栏行。</div></li>
+          <li><span class="point-list__no">2</span><div><b>下拉里信息不缩水。</b>4 篇文档、当前项主色高亮、新建文档、逐项删除，全部在浮层里（图中为展开态）。</div></li>
+          <li><span class="point-list__no">3</span><div><b>整页都是编辑器。</b>书写区纯白、无边框、无阴影、无卡片；标题 22px、正文行高 1.95，像系统备忘录。</div></li>
+          <li><span class="point-list__no">4</span><div><b>地址/账号/密码仍等宽。</b>长文用无衬线保证可读性，凭证行切等宽并对齐标签。</div></li>
+          <li><span class="point-list__no">5</span><div><b>按钮极少。</b>工具条只有复制全文与「⋯」，删除收进文件列表 hover，避免密集按钮打断书写。</div></li>
+          <li><span class="point-list__no">6</span><div><b>focus 只有光标。</b>输入框全部去边框，聚焦时不加卡片光环，只保留闪烁插入符。</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="subhead">全屏宽视图 <span>1200px · 左侧 240px 文件栏 + 右侧整页编辑器</span></div>
+    <div class="panel-wrap" style="width:1200px">
+      <div class="frame frame--wide">
+        <div class="frame__cap"><span class="frame__dots"><i></i><i></i><i></i></span><span class="frame__cap-label">index.html</span><span class="frame__tag">示意数据 · 共 4 篇</span></div>
+        <div class="frame__body">
+          <div class="app app--wide">
+            <div class="topbar">
+              <span class="brand"><span class="brand__mark"><svg class="ic"><use href="#i-logo"/></svg></span><span class="brand__name">便签本 <em>· Sticky</em></span></span>
+              <div class="seg" style="margin-left:14px"><button class="seg__item" type="button"><svg class="ic ic--sm"><use href="#i-stickies"/></svg>便签 <span class="seg__count">8</span></button><button class="seg__item is-active" type="button"><svg class="ic ic--sm"><use href="#i-doc"/></svg>记事本</button></div>
+              <span class="topbar__spacer"></span>
+              <button class="btn btn--ghost btn--sm" type="button"><svg class="ic ic--sm"><use href="#i-expand"/></svg>全屏打开</button>
+            </div>
+
+            <div class="nb nb--wide">
+              <aside class="nb-sidebar">
+                <div class="nb-sidebar__head"><svg class="ic ic--sm"><use href="#i-doc"/></svg>文档<span>4 篇</span></div>
+                <button class="file-new" type="button"><svg class="ic ic--sm"><use href="#i-plus"/></svg>＋ 新建文档</button>
+                <div class="file-list">
+                  <div class="file-item is-current"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">发布前检查清单</span><span class="file-item__meta">1,284 字 · 11-13 14:32</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                  <div class="file-item"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">周会记录</span><span class="file-item__meta">320 字 · 11-12 09:10</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                  <div class="file-item"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">临时命令备忘</span><span class="file-item__meta">86 字 · 11-10 18:22</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                  <div class="file-item"><svg class="ic ic--sm file-item__ic"><use href="#i-file"/></svg><span class="file-item__txt"><span class="file-item__name">API 联调记录</span><span class="file-item__meta">612 字 · 11-08 15:47</span></span><button class="file-item__del" type="button" title="删除"><svg class="ic" style="width:12px;height:12px"><use href="#i-trash"/></svg></button></div>
+                </div>
+                <div class="nb-sidebar__foot"><svg class="ic ic--sm"><use href="#i-info"/></svg><span>文档以明文保存在本机，不加密、不联网、不同步。</span></div>
+              </aside>
+
+              <div class="editor">
+                <div class="editor__bar"><span class="editor__name">发布前检查清单</span><span class="editor__sep"></span><span class="editor__meta">1,284 字 · 更新 11-13 14:32</span><span class="sp"></span><button class="btn" type="button"><svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文</button><button class="btn" type="button"><svg class="ic ic--sm"><use href="#i-dots"/></svg></button></div>
+                <div class="editor__page">
+                  <div class="editor__title">发布前检查清单</div>
+                  <div class="editor__body">
+                    <h4>一、环境信息</h4>
+                    <p class="mono-line"><span>地址：</span>https://pyxis.internal.dev</p>
+                    <p class="mono-line"><span>账号：</span>ops_admin</p>
+                    <p class="mono-line"><span>密码：</span>Poc@Meta_0•••</p>
+                    <h4>二、发布顺序</h4>
+                    <ol><li>先确认 canal 同步位点无滞后，再切网关流量。</li><li>观察 Alert 面板 15 分钟，无新增告警再继续。</li><li>rocketMq 消费堆积清零后收尾。</li></ol>
+                    <h4>三、回滚</h4>
+                    <p>脚本在跳板机 /opt/rollback/ 下，执行前二次确认<span class="editor__caret"></span></p>
+                    <h4>四、值班备注</h4>
+                    <p>发布窗口 22:00–23:30；异常直接回滚，不在群里等确认。次日补一份复盘记录，归档到「周会记录」。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wide-note">
+      <div class="wide-note__item"><b>左侧常驻 vs 顶部下拉</b>宽屏用 240px 文件栏常驻；窄栏把同一份列表收进顶部下拉，信息不减少、纵向不增加。</div>
+      <div class="wide-note__item"><b>编辑区不设卡片</b><code class="code">.editor</code> 纯白铺满剩余宽高，只有一条 44px 极轻工具条；没有边框、阴影、格式栏。</div>
+      <div class="wide-note__item"><b>当前项高亮</b>主色浅底 + 主色文字 + 细边；删除图标 hover 才出现，避免误触。</div>
+      <div class="wide-note__item"><b>书写优先</b>标题 28px、正文行高 1.95、左右留白 34px；地址/账号/密码行等宽对齐，长文仍用无衬线。</div>
+    </div>
+  </section>
+
+  <!-- ============ 04 状态与反馈 ============ -->
+  <section class="doc-section">
+    <div class="sec-head">
+      <div class="sec-head__no">04</div>
+      <div class="sec-head__txt">
+        <h2 class="sec-head__title">状态与反馈 <span>静态状态清单</span></h2>
+        <p class="sec-head__desc">卡片操作态（含条件渲染）、focus、搜索命中、toast、空状态、加载态，均为纯 CSS 呈现。</p>
+      </div>
+      <span class="pill">6 个状态</span>
+    </div>
+
+    <div class="state-grid">
+      <div class="state">
+        <div class="state__head"><span class="state__no">A</span><span class="state__name">卡片操作态</span><span class="state__en">hover 角标与菜单</span></div>
+        <div class="state__demo">
+          <div class="mini-card">
+            <div class="mini-card__ops"><span class="mini-op"><svg class="ic"><use href="#i-copy"/></svg></span><span class="mini-op"><svg class="ic"><use href="#i-key"/></svg></span><span class="mini-op"><svg class="ic"><use href="#i-dots"/></svg></span></div>
+            <div class="mini-card__t">pyxis</div>
+            <div class="mini-card__x">密码： Poc@Meta_0•••</div>
+          </div>
+          <div class="mini-menu">
+            <ul><li><svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文</li><li><svg class="ic ic--sm"><use href="#i-key"/></svg>复制密码</li><li class="danger"><svg class="ic ic--sm"><use href="#i-trash"/></svg>删除</li></ul>
+            <ul><li><svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文</li><li class="danger"><svg class="ic ic--sm"><use href="#i-trash"/></svg>删除</li></ul>
+          </div>
+        </div>
+        <p class="state__note">左：正文含 <code class="code">密码：</code> 时角标与菜单都有「复制密码」；右：无密码行时该项按 <code class="code">extractPassword</code> 条件不渲染。默认收起、hover / focus 淡入。</p>
+      </div>
+
+      <div class="state">
+        <div class="state__head"><span class="state__no">B</span><span class="state__name">输入框 focus 态</span><span class="state__en">输入聚焦</span></div>
+        <div class="state__demo">
+          <div class="fake-input"><svg class="ic ic--sm"><use href="#i-search"/></svg>搜索便签<span class="caret"></span></div>
+          <div class="hint-row"><span class="hint">边框 → --accent</span><span class="hint">3px --accent-ring</span><span class="hint">图标转主色</span></div>
+        </div>
+        <p class="state__note">搜索框、详情浮层标题/正文、按钮统一主色边框 + 光环；<b>书写区例外</b>——聚焦不加卡片光环，只保留插入符，维持沉浸感。</p>
+      </div>
+
+      <div class="state">
+        <div class="state__head"><span class="state__no">C</span><span class="state__name">搜索命中态</span><span class="state__en">命中高亮</span></div>
+        <div class="state__demo">
+          <div class="hit-query"><svg class="ic ic--sm"><use href="#i-search"/></svg>搜索词：<b>apisix</b></div>
+          <div class="hit-box"><span class="k">地址：</span> https://<mark>apisix</mark>-gw.internal.dev<br /><span class="k">账号：</span> gateway<br /><span class="k">密码：</span> ••••••••</div>
+        </div>
+        <p class="state__note">空格分词 AND 匹配标题与正文；命中片段以 <code class="code">--highlight</code> 淡黄底标注（示意增强，落地可选），网格只保留命中卡片。</p>
+      </div>
+
+      <div class="state">
+        <div class="state__head"><span class="state__no">D</span><span class="state__name">toast 反馈</span><span class="state__en">轻提示</span></div>
+        <div class="state__demo state__demo--center">
+          <div class="toast"><svg class="ic ic--sm"><use href="#i-check"/></svg>已复制密码</div>
+          <span class="hint">底部居中浮层 · --shadow-pop · 260ms 入场</span>
+        </div>
+        <p class="state__note">成功语义：浅绿底 + 绿勾 + 细边；复制成功 / 新建 / 删除 / 清空 / 切换文档共用。位置与侧栏视图中的浮层一致。</p>
+      </div>
+
+      <div class="state">
+        <div class="state__head"><span class="state__no">E</span><span class="state__name">空状态</span><span class="state__en">零结果</span></div>
+        <div class="state__demo state__demo--center">
+          <div class="empty"><svg class="ic"><use href="#i-stickies"/></svg><strong>没有匹配的便签。</strong><span>换个关键词试试</span><span class="empty__alt">便签为空：「还没有便签，点「＋ 新建便签」直接填。」</span></div>
+        </div>
+        <p class="state__note">便签网格与记事本列表各有空态；记事本无文档时用「还没有文档，点「＋ 新建文档」开始写。」图标线性、低饱和。</p>
+      </div>
+
+      <div class="state">
+        <div class="state__head"><span class="state__no">F</span><span class="state__name">加载态</span><span class="state__en">初始化</span></div>
+        <div class="state__demo">
+          <div class="loading-line"><span class="loading-dot"></span>正在读取本地数据…</div>
+          <div class="sk-grid"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+        </div>
+        <p class="state__note">初始化读 <code class="code">chrome.storage.local</code> 时展示网格骨架，呼吸 1.6s；与 <code class="code">ready</code> 状态切换，两个模块共用。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 05 设计说明 ============ -->
+  <section class="doc-section">
+    <div class="sec-head">
+      <div class="sec-head__no">05</div>
+      <div class="sec-head__txt">
+        <h2 class="sec-head__title">设计说明 <span>思路、改动与落地</span></h2>
+        <p class="sec-head__desc">含两个产品问题的回答；所有建议仅作说明，稿中不实现任何新增功能。</p>
+      </div>
+      <span class="pill">仅样式改动</span>
+    </div>
+
+    <div class="doc-cols">
+      <div class="doc-col">
+        <h4><svg class="ic ic--sm"><use href="#i-layers"/></svg>整体思路</h4>
+        <p>沿用 v3 的「微暖纸感 + 靛蓝墨」设计系统，让两个模块看起来是同一个产品：同一根顶栏、同一套圆角与柔阴影、同一套等宽凭证行、同一套「默认低调、hover / focus 才强调」的交互。</p>
+        <p>差异只在主体：便签是<b>高密度扫描</b>——小卡片、瀑布网格、摘要截断、操作收起；记事本是<b>低密度沉浸</b>——纯白整页、大标题、宽行距、极轻工具条。一密一疏，切换时布局明显不同。</p>
+        <p>便签卡片不再内嵌输入框：点击才进详情浮层编辑，既让卡片变小、一屏看更多，也让「复制」成为不需要进入编辑就能完成的高频动作。</p>
+      </div>
+
+      <div class="doc-col">
+        <h4><svg class="ic ic--sm"><use href="#i-check"/></svg>与上一版的关键改动</h4>
+        <ul>
+          <li><b>新增一级切换器：</b>顶栏分段控件「便签 / 记事本」，张数徽章并入「便签 8」。</li>
+          <li><b>便签由大卡片改小卡片：</b>整列大卡 → n*n 瀑布网格；标题 + 2–4 行摘要，超出省略。</li>
+          <li><b>编辑从常驻变按需：</b>卡片内不再放 textarea，点开才出现详情浮层；输入即存不变。</li>
+          <li><b>操作收进角标与「⋯」：</b>复制全文 / 复制密码 / 删除 hover 才淡入，窄卡片不溢出。</li>
+          <li><b>工具条由两行收为一行：</b>搜索框 + 34px 方形「＋」，窄栏省下约 44px 纵向空间。</li>
+          <li><b>新增记事本模块：</b>文件列表 + 整页无边框书写区；宽屏左栏常驻、窄栏顶部下拉。</li>
+          <li><b>响应式列数：</b>侧栏 2 列、中宽 3 列、全屏 4 列，同一份卡片组件。</li>
+        </ul>
+      </div>
+
+      <div class="doc-col">
+        <h4><svg class="ic ic--sm"><use href="#i-shield"/></svg>落地到 base.css 的注意事项</h4>
+        <ul>
+          <li>顶部注释的 token 全部进 <code class="code">:root</code>；旧 <code class="code">--primary</code> 统一为 <code class="code">--accent</code>；新增 <code class="code">--nav-w / --topbar-h / --seg-h / --card-min</code>。</li>
+          <li><b>不改业务逻辑：</b>类名沿用 <code class="code">.topbar / .toolbar / .footer / .toast</code>；新增 <code class="code">.seg / .stickies / .sticky / .detail / .nb / .editor / .file-item</code> 等纯样式类。</li>
+          <li><b>瀑布用纯 CSS：</b><code class="code">.stickies{columns:N;column-gap}</code> + <code class="code">.sticky{break-inside:avoid;display:inline-block;width:100%}</code>；按容器宽度切 2/3/4 列，无需 JS 砌墙。</li>
+          <li><b>摘要截断：</b><code class="code">-webkit-line-clamp:4</code> + <code class="code">overflow:hidden</code>；<code class="code">white-space:pre-line</code> 保留换行。</li>
+          <li><b>详情浮层：</b>用 <code class="code">dialog</code> 或绝对定位浮层；焦点锁在浮层内，Esc 关闭；正文 textarea 保持等宽、<code class="code">resize:vertical</code>、输入即存的串行写入。</li>
+          <li><b>记事本书写区：</b><code class="code">.editor</code> 用 <code class="code">flex:1;min-height:0</code> 撑满剩余宽高；标题与正文 <code class="code">border:0;outline:0;background:transparent</code>，不要套卡片；<code class="code">:focus-visible</code> 只保留插入符。</li>
+          <li><b>sticky 作用域：</b>顶栏 sticky 置于滚动容器内，<code class="code">--topbar-h</code> 恒定 52px；全屏页不滚动时把顶栏 / 工具条改回 <code class="code">position:static</code>。</li>
+          <li><b>功能红线：</b>删除与清空仍走 <code class="code">window.confirm</code>（清空二次确认）；「复制密码」仍由 <code class="code">extractPassword</code> 条件控制；无登录 / 解锁 / 保存按钮 / 联网。</li>
+          <li><b>数据红线：</b>稿中密码全为脱敏示意值，落地时切勿写进 <code class="code">src/seed/initialNotes.ts</code>；记事本文档为示意内容，播种逻辑另行处理。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="qa-card">
+        <span class="qa-card__tag">产品问题 01</span>
+        <h5>便签和记事本的数据是否需要互通？例如便签一键「转为文档」。</h5>
+        <p><b>建议：不做互通，也不提供「转为文档」。<span class="no">本稿不实现该功能。</span></b></p>
+        <p>理由一，<b>心智模型不同</b>：便签是碎片、短、即取即弃，价值在「一眼扫过 + 一键复制」；记事本是长文、持续编辑，价值在沉浸书写。强行打通会让两个模块互相污染定位。</p>
+        <p>理由二，<b>一份内容两处真相</b>：纯本地明文、无同步、无版本历史，转换即产生副本；用户改了原便签，文档不会跟着变，很容易残留过期凭证，反而扩大明文暴露面，与「请只放开发 / 测试信息」的风险提示相悖。</p>
+        <p>理由三，<b>成本与边界</b>：需要新增跨模块引用、冲突处理与删除联动，超出「打开即用」的极简基线。若未来确有需求，建议作为独立提案，只提供<b>显式的单向动作</b>（例如用户手动复制内容后新建文档），不做自动关联或双向同步。</p>
+      </div>
+      <div class="qa-card">
+        <span class="qa-card__tag">产品问题 02</span>
+        <h5>两个模块共用的顶栏 / 切换器，如何不占用侧栏本就紧张的纵向空间？</h5>
+        <p><b>结论：顶栏合并为一行、高度锁死，切换器不新增任何一行。</b></p>
+        <p>① <b>切换器进顶栏，不另起一行：</b>品牌方块 + 分段控件 + 全屏按钮同处 52px 顶栏；宽屏也只增到 56px。分段控件用 <code class="code">--seg-h 32px</code>，不撑高整行。</p>
+        <p>② <b>窄栏做减法：</b>380px 内隐藏产品名文字，只留 26px 品牌方块；「全屏打开」收成图标按钮；<b>张数徽章并入分段标签「便签 8」</b>，省掉一个独立元素。三者都让位给切换器，避免两行顶栏。</p>
+        <p>③ <b>模块工具条本来就得有，不因切换器增加：</b>便签工具条由上一版两行收为一行（搜索框 + 方形「＋」，34px）；记事本把「文件切换 + 字数 + 复制」压成同一行 40px，文件列表收成下拉浮层，不常驻占高。</p>
+        <p>④ <b>滚动时仍只占一行：</b>顶栏 <code class="code">position:sticky;top:0</code> 且高度恒定；模块工具条紧随其后。整个侧栏固定开销 = 52px 顶栏 + 34/40px 工具条，其余全部留给内容。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="doc-foot">
+    <span>便签本 · Sticky / 双模块静态视觉设计稿 / 待评审，未落地实现</span>
+    <span>单文件 · 内嵌 CSS · 内联 SVG · 无脚本 · 可离线双击打开</span>
+  </footer>
+
+</div>
+</body>
+</html>

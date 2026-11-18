@@ -1,0 +1,6 @@
+node_modules/
+dist/
+/manifest.json
+/index.html
+*.log
+.DS_Store
