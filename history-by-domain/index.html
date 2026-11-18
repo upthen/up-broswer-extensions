@@ -12,6 +12,7 @@
     <div class="tab-switch" role="tablist" aria-label="数据源">
       <button id="tabHistory" type="button" class="tab-btn is-active" role="tab" aria-selected="true" data-tab="history">历史</button>
       <button id="tabBookmarks" type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="bookmarks">书签</button>
+      <button id="tabTabs" type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="tabs">标签页</button>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索域名或页面标题" aria-label="搜索历史记录" />
@@ -81,6 +82,19 @@
 
       <p class="footnote">书签按你在浏览器里整理的文件夹排列，一张卡片就是一个文件夹，卡片内只放它的直属书签，子文件夹可点进去逐层查看。名单来自浏览器自身的书签库，每次进入本页、写操作成功后或切回标签页时重新读取。删除书签 / 文件夹会直接改动浏览器书签且不可恢复，删除前会给出准确范围与二次确认。</p>
     </section>
+
+    <!-- 标签页视图：v1.4.0，按需加载，只读标签元数据，不落库、不常驻监听 -->
+    <section id="tabsView" hidden aria-label="标签页">
+      <div class="tabs-toolbar">
+        <span id="tabsCount" class="bm-count"></span>
+        <div class="tabs-actions">
+          <button id="tabsRefresh" type="button" class="btn" data-action="tabs-refresh">刷新</button>
+        </div>
+      </div>
+      <div id="tabsEmpty" class="empty" hidden></div>
+      <section id="tabsGrid" class="grid" aria-label="域名标签页卡片"></section>
+      <p class="footnote">标签数据来自浏览器当前打开的页面，仅在切到本页、切回面板或点击刷新时读取；网迹不保存任何标签数据。固定标签不参与批量关闭；关闭标签可用 Ctrl+Shift+T 恢复。</p>
+    </section>
   </main>
 
   <!-- 全局浮层：文件夹树 / 新建 / 改名 / 移动 / 删除确认 -->
@@ -88,6 +102,7 @@
     <div id="bmDialog" class="dialog" role="dialog" aria-modal="true"></div>
   </div>
   <div id="bmToast" class="toast" hidden></div>
+  <div id="tabsToast" class="toast" hidden></div>
 
   <script type="module" src="./app.js"></script>
 </body>

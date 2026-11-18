@@ -809,3 +809,75 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 @media (max-width: 640px) {
   .bm-folder-ops { opacity: 1; }
 }
+
+/* ---- v1.4.0：标签页 tab ---- */
+.tabs-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 18px;
+}
+.tabs-actions { display: flex; gap: 8px; margin-left: auto; }
+.tabs-actions .btn { padding: 6px 12px; font-size: 12px; }
+
+.card--tabs .card-tools { align-self: flex-start; margin-top: 4px; }
+.tabs-close-all {
+  padding: 5px 10px;
+  border: 1px solid #e0a9a2;
+  border-radius: 3px;
+  background: #fff;
+  color: #a8514a;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tabs-close-all:hover:not(:disabled) { background: #fdecea; border-color: #c0392b; color: #b93a2b; }
+.tabs-close-all:disabled { opacity: 0.5; cursor: default; }
+
+.card--tabs .pages li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+}
+.card--tabs .tab-focus {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
+  padding: 7px 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.card--tabs .tab-focus:hover { background: #f7f9fd; color: var(--accent); }
+.card--tabs .tab-focus .p-title {
+  display: block;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.card--tabs .tab-meta {
+  color: var(--muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card--tabs .tab-ops {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+}
+.card--tabs .tab-op { width: 24px; height: 24px; padding: 4px; }

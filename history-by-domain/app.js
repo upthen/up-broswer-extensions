@@ -27,13 +27,17 @@ const historyViewEl = $('#historyView');
 const bookmarkViewEl = $('#bookmarkView');
 const tabHistoryBtn = $('#tabHistory');
 const tabBookmarksBtn = $('#tabBookmarks');
+const tabTabsBtn = $('#tabTabs');
+
+// v1.4.0：标签页面板按需加载，未切到该 tab 时连模块代码都不引入。
+let tabsPanel = null;
 
 const BATCH = 30;
 const REFRESH_GAP = 60_000;
 const INLINE_LIMIT = 10; // 卡内展开上限：超过则在新标签页展示完整列表（SPEC v1.1 §9.8）
 
 const state = {
-  activeTab: 'history', // 'history' | 'bookmarks'；会话内记忆，不落盘（§16.8）
+  activeTab: 'history', // 'history' | 'bookmarks' | 'tabs'；会话内记忆，不落盘（§16.8 / §17）
   mode: 'recent', // 'recent' | 'all' | 'search'
   prevMode: 'recent',
   basePages: new Map(), // url -> PageItem（仅内存）
@@ -360,8 +364,8 @@ async function renderScope(g) {
 }
 
 async function render() {
-  // v1.3.0：书签 tab 激活时，历史侧在途异步不得回来覆写共享的 #status。
-  if (state.activeTab === 'bookmarks') return;
+  // v1.3.0 / v1.4.0：其它 tab 激活时，历史侧在途异步不得回来覆写共享的 #status。
+  if (state.activeTab !== 'history') return;
   const g = ++state.renderGen;
 
   if (state.scopeKey) {
@@ -628,6 +632,11 @@ qEl.addEventListener('input', () => {
     debounceTimer = setTimeout(() => { bookmarksPanel.onQuery(v); }, 120);
     return;
   }
+  if (state.activeTab === 'tabs') {
+    // §17：标签页侧同样纯内存过滤，零 tabs API 调用。
+    debounceTimer = setTimeout(() => { if (tabsPanel) tabsPanel.onQuery(v); }, 120);
+    return;
+  }
   if (state.scopeKey) {
     // 域内搜索是纯内存过滤：不需要 ≥2 字符门槛，防抖也可以更短。
     state.scopeQuery = v;
@@ -647,6 +656,12 @@ qEl.addEventListener('keydown', (e) => {
     if (bookmarksPanel.onEscape()) e.preventDefault();
     return;
   }
+  if (state.activeTab === 'tabs') {
+    e.preventDefault();
+    qEl.value = '';
+    if (tabsPanel) tabsPanel.onQuery('');
+    return;
+  }
   if (state.scopeKey) {
     e.preventDefault();
     exitScope();
@@ -657,7 +672,7 @@ loadAllBtn.addEventListener('click', () => { loadAll(); });
 
 // v1.3.0：顶栏分段控件。历史侧原有状态机完全不动，只做视图显隐与搜索词交接。
 function setTabUI(tab) {
-  for (const btn of [tabHistoryBtn, tabBookmarksBtn]) {
+  for (const btn of [tabHistoryBtn, tabBookmarksBtn, tabTabsBtn]) {
     const on = btn.dataset.tab === tab;
     btn.classList.toggle('is-active', on);
     btn.setAttribute('aria-selected', String(on));
@@ -665,11 +680,14 @@ function setTabUI(tab) {
 }
 
 async function switchTab(tab) {
-  if (tab !== 'history' && tab !== 'bookmarks') return;
+  if (tab !== 'history' && tab !== 'bookmarks' && tab !== 'tabs') return;
   if (tab === state.activeTab) return;
-  // §16.7-12：两类写操作互斥。历史侧二次确认阶段 deleteBusy 已复位，
-  // 但 deleteView 仍在，必须一并拦住；书签侧由 pendingDelete / busy 覆盖。
+  // §16.7-12 / §17：写操作互斥扩为三类。历史侧 deleteView 仍在时必须拦住；
+  // 书签侧由 pendingDelete / busy 覆盖；标签页侧由自身的 busy / 确认态覆盖。
   if (state.deleteBusy || state.deleteView || bookmarksPanel.isBusy()) return;
+  if (tabsPanel && tabsPanel.isBusy()) return;
+
+  if (tabsPanel) tabsPanel.deactivate();
 
   if (tab === 'bookmarks') {
     // 作废历史侧在途异步（搜索竞态 / 域内扫描 / 加载全部），状态保留在内存里。
@@ -682,6 +700,23 @@ async function switchTab(tab) {
     historyViewEl.hidden = true;
     qEl.setAttribute('aria-label', '搜索书签');
     await bookmarksPanel.activate(qEl.value.trim());
+    return;
+  }
+
+  if (tab === 'tabs') {
+    // v1.4.0：只在这里动态引入标签页模块；历史侧在途异步随 generation 作废。
+    state.generation += 1;
+    state.scopeGen += 1;
+    state.cancelLoad = true;
+    state.scopeLoading = false;
+    bookmarksPanel.deactivate();
+    bookmarkViewEl.hidden = true;
+    historyViewEl.hidden = true;
+    state.activeTab = 'tabs';
+    setTabUI('tabs');
+    qEl.setAttribute('aria-label', '搜索标签页');
+    if (!tabsPanel) tabsPanel = await import('./tabs-panel.js');
+    await tabsPanel.activate(qEl.value.trim());
     return;
   }
 
@@ -698,11 +733,16 @@ async function switchTab(tab) {
 }
 tabHistoryBtn.addEventListener('click', () => { switchTab('history'); });
 tabBookmarksBtn.addEventListener('click', () => { switchTab('bookmarks'); });
+tabTabsBtn.addEventListener('click', () => { switchTab('tabs'); });
 
 document.addEventListener('click', (e) => {
   const target = e.target instanceof Element ? e.target.closest('[data-action]') : null;
   if (!target) return;
   const { action, url, key } = target.dataset;
+  if (state.activeTab === 'tabs') {
+    // 标签页侧的所有动作由 tabs-panel.js 在自己的视图内委托，历史侧一律不接管。
+    return;
+  }
   if (state.activeTab === 'bookmarks') {
     // 书签作用域行由 scope-view.js 生成，沿用 data-action="open-page"；
     // 其余 bm-* 动作由 bookmarks-panel.js 自己的委托处理，这里一律不接管。
@@ -748,6 +788,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
   if (state.activeTab === 'bookmarks') { await bookmarksPanel.onVisibility(); return; }
+  if (state.activeTab === 'tabs') { if (tabsPanel) await tabsPanel.onVisibility(); return; }
   if (state.mode === 'search' || state.loadingAll || state.deleteBusy || state.scopeKey) return;
   if (Date.now() - state.lastLoadAt < REFRESH_GAP) return;
   // 只做增量补充新访问；删除历史由用户刷新页面（F5）体现。
@@ -779,6 +820,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     qEl.value = q;
     // §16.8：Alt+H / omnibox 入口作用于当前 tab。
     if (state.activeTab === 'bookmarks') { bookmarksPanel.onQuery(q); return; }
+    if (state.activeTab === 'tabs') { if (tabsPanel) tabsPanel.onQuery(q); return; }
     if (state.scopeKey) { exitScope(); return; } // omnibox 是全局入口，先撤掉域名限定
     if (q.length >= 2) runSearch(q);
     else clearSearch();
@@ -788,14 +830,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 async function init() {
   const params = new URLSearchParams(location.search);
   const initialQuery = params.get('q') || '';
+  const initialTab = params.get('tab');
   // 仍先读一次历史首屏：深链直达书签后，切回历史 tab 也有数据，不必刷新。
-  mergePages(await firstScreen());
-  state.lastLoadAt = Date.now();
-  await render();
-  if (params.get('tab') === 'bookmarks') {
-    // §16.8 深链：activeTab 只存模块内存，关标签即忘。
+  // 深链直达标签页时跳过，避免为看标签页而先读历史。
+  if (initialTab !== 'tabs') {
+    mergePages(await firstScreen());
+    state.lastLoadAt = Date.now();
+    await render();
+  }
+  if (initialTab === 'bookmarks' || initialTab === 'tabs') {
+    // §16.8 / §17 深链：activeTab 只存模块内存，关标签即忘。
     qEl.value = initialQuery;
-    await switchTab('bookmarks');
+    await switchTab(initialTab);
   } else if (initialQuery.trim().length >= 2) {
     qEl.value = initialQuery;
     runSearch(initialQuery.trim());
