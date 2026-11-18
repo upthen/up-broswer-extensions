@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<!--
+================================================================================
+  history-by-domain · 网迹 —— v1.3.0「历史 / 书签」双 tab 全状态静态设计稿
+  【§16.13 修订】书签 tab 由「域名卡片墙」改为「按书签文件夹排列」的文件夹卡片墙
+--------------------------------------------------------------------------------
+  ◈ 性质声明
+    本文件仅为「设计提案 / 静态视觉稿」，不是可运行产品页面。
+    不含任何脚本（不出现脚本标签）；所有按钮、输入框、菜单均为绘制态，无任何行为；
+    所有域名、标题、网址、文件夹、时间、计数均为「示意假数据」（example.com /
+    docs.example.com / github.com …），不含任何真实个人数据或真实账号。
+    可离线双击打开，CSS 全部内嵌，图标为内联 SVG，零外链（无 CDN / 外部字体 /
+    外部图片 / 外部样式导入），不加载任何网络资源。
+
+  ◈ 沿用产品现有设计 token（history-by-domain/styles.css，浅色主题，不新增色板）
+    --bg            #f5f7fb   App / 提案页画布底色
+    --surface       #ffffff   卡片 / 顶栏 / 浮层
+    --border        #e3e8f0   默认边框
+    --border-strong #cbd5e5   hover 边框 / 输入边框
+    --text          #1c2536   主文字
+    --muted         #6b7688   次级文字
+    --accent        #1d4ed8   主色（分段激活 / 链接 / 作用域 chip）
+    --accent-soft   #eaf0fe   主色浅底
+    --mark          #fff0a8   搜索命中高亮底
+    衍生（沿用现有 CSS 已出现的值）：强调边框 #b9cdf7、favicon 底 #f0f3f9 /
+    #5b6b86、浅分隔 #f0f3f8、次级底 #f7f9fc / #fbfcfe。
+    danger 仅用于删除确认与危险按钮：#c23b33（hover #a93226）/
+    浅底 #fff5f4、边框 #f0b8b1、危险文字 #8f2b20。
+    字体：系统无衬线（-apple-system / Segoe UI / Microsoft YaHei / PingFang SC），
+    地址类用系统等宽（ui-monospace / Consolas）。不做深色主题。
+
+  ◈ 画板规格
+    10 个独立 section 纵向排列，每个固定宽 1400px，带稳定 id（s01…s10）与
+    data-shot（短标题，供按 section 裁图），顶部标注状态名与 1–2 条设计要点。
+
+  ◈ §16.13 修订（用户 2026-11-17 反馈：「看着是按域名排的，不方便找内容」）
+    历史 tab 仍按域名聚合（零回归）；书签 tab 改为一张卡片 = 一个书签文件夹，
+    按 Chrome 书签树前序排列，卡片内只放直属书签，子文件夹做成可点入口。
+    本修订优先级高于早期「两个 tab 同形」的表述，详见 SPEC.md §16.13。
+
+  ◈ 明确不做（本稿不出现为任何功能）
+    跨源「已收藏」标记 · 拖拽排序 · 撤销 / 回收站 · 导入导出 · 深色主题。
+
+  ◈ 状态索引
+    s01 历史 tab · 默认首屏（对照基准）      s02 书签 tab · 文件夹卡片墙首屏
+    s03 书签 tab · 行 hover 菜单             s04 两步确认条（统计中 / 确认删除）
+    s05 树形弹层（文件夹树）                 s06 文件夹作用域视图
+    s07 搜索状态（命中 / 空结果）            s08 详情页（书签文件夹详情 · 只读）
+    s09 空态与边界（空 / 特殊协议）          s10 设计说明与 token 表
+================================================================================
+--><html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>网迹 — v1.3.0 双 tab 全状态静态设计稿（§16.13 书签文件夹卡片墙）</title>
+<style>
+/* ============================================================
+   0. Tokens
+   ============================================================ */
+:root{
+  color-scheme:light;
+  --bg:#f5f7fb; --surface:#ffffff; --border:#e3e8f0; --border-strong:#cbd5e5;
+  --text:#1c2536; --muted:#6b7688; --accent:#1d4ed8; --accent-soft:#eaf0fe;
+  --mark:#fff0a8;
+  --accent-border:#b9cdf7; --fav-bg:#f0f3f9; --fav-ink:#5b6b86;
+  --line-soft:#f0f3f8; --surface-2:#f7f9fc; --surface-3:#fbfcfe;
+  --danger:#c23b33; --danger-hover:#a93226; --danger-soft:#fff5f4;
+  --danger-border:#f0b8b1; --danger-ink:#8f2b20;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  --font-mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --r-xs:3px; --r-sm:4px; --r-md:4px; --r-lg:4px; --r-pill:999px;
+  --sh-sm:0 2px 10px rgba(28,37,54,.06);
+  --sh-pop:0 10px 30px rgba(28,37,54,.16),0 2px 8px rgba(28,37,54,.08);
+  --sh-frame:0 16px 44px rgba(28,37,54,.10),0 2px 8px rgba(28,37,54,.05);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;padding:38px 0 64px;background:var(--bg);color:var(--text);
+  font:14px/1.6 var(--font-sans);-webkit-font-smoothing:antialiased}
+button,input{font-family:inherit}
+button{cursor:default}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.ic{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.ic--xs{width:12px;height:12px}
+.ic--sm{width:14px;height:14px}
+.ic--lg{width:22px;height:22px}
+mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
+
+/* 提案页页头 */
+.doc-top{width:1400px;margin:0 auto 30px;padding:0 4px}
+.doc-top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.3px}
+.doc-top h1 small{font-size:14px;font-weight:450;color:var(--muted);margin-left:12px;letter-spacing:0}
+.doc-top p{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.7}
+.doc-top .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-border);
+  border-radius:var(--r-pill);padding:3px 11px;margin-right:8px}
+
+/* ============================================================
+   1. 画板 / 编号标题条
+   ============================================================ */
+.board{width:1400px;margin:0 auto 46px;background:var(--surface);
+  border:1px solid var(--border-strong);border-radius:var(--r-lg);
+  box-shadow:var(--sh-frame);overflow:hidden}
+.board-head{display:flex;align-items:flex-start;gap:16px;padding:18px 24px;
+  border-bottom:1px solid var(--border);background:var(--surface)}
+.bno{width:42px;height:42px;flex:none;display:grid;place-items:center;border-radius:4px;
+  background:var(--accent-soft);border:1px solid var(--accent-border);color:var(--accent);
+  font:700 14px/1 var(--font-mono)}
+.bhead-txt{flex:1;min-width:0;padding-top:1px}
+.bhead-title{font-size:17px;font-weight:650;letter-spacing:-.2px;margin:0}
+.bhead-title em{font-style:normal;font-weight:500;color:var(--muted);font-size:12px;margin-left:10px;letter-spacing:.3px}
+.bhead-notes{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.65}
+.bhead-notes b{color:var(--text);font-weight:600}
+.bhead-tag{flex:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);
+  border:1px solid var(--accent-border);border-radius:var(--r-pill);padding:5px 12px;margin-top:4px}
+.bhead-tag--neutral{color:var(--muted);background:var(--surface-2);border-color:var(--border)}
+
+/* 产品 App 模拟外壳 */
+.app{background:var(--bg)}
+.pad{padding:20px 22px 26px}
+.pad-tight{padding:16px 22px 22px}
+
+/* ============================================================
+   2. 顶栏 / 分段控件 / 搜索框 / 状态行
+   ============================================================ */
+.topbar{display:flex;align-items:center;gap:20px;padding:14px 22px;
+  background:rgba(255,255,255,.94);border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.brand-mark{width:22px;height:22px;border-radius:4px;background:var(--accent);
+  box-shadow:inset 0 0 0 4px var(--accent),inset 0 0 0 6px #fff}
+.brand h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.2px;white-space:nowrap}
+.seg{display:inline-flex;align-items:center;gap:2px;padding:3px;flex:none;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r-pill)}
+.seg button{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 16px;
+  border:0;border-radius:var(--r-pill);background:transparent;color:var(--muted);
+  font-size:13px;font-weight:600;white-space:nowrap}
+.seg button.is-active{background:var(--surface);color:var(--accent);
+  box-shadow:0 1px 3px rgba(28,37,54,.14)}
+.search{position:relative;flex:1 1 320px;max-width:560px;min-width:0}
+.search > .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.search input{width:100%;height:38px;padding:0 92px 0 36px;
+  border:1px solid var(--border-strong);border-radius:var(--r-sm);
+  background:var(--surface);color:var(--text);font:inherit;outline:none}
+.search input::placeholder{color:#9aa5b5}
+.kbd{position:absolute;right:10px;top:9px;padding:1px 7px;border:1px solid var(--border);
+  border-radius:4px;background:var(--surface-2);color:var(--muted);
+  font:11px/1.7 var(--font-mono);pointer-events:none}
+.topstat{flex:none;color:var(--muted);font-size:12px;white-space:nowrap}
+
+.statusbar{display:flex;align-items:center;gap:14px;padding:10px 22px;
+  background:var(--surface);border-bottom:1px solid var(--border)}
+.sb-info{font-size:12px;color:var(--muted);flex:1;min-width:0}
+.sb-info b{color:var(--text);font-weight:600}
+.sb-info .dot{display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:var(--accent);vertical-align:middle;margin:0 6px}
+.sb-actions{display:flex;align-items:center;gap:8px;flex:none}
+.mini-btn{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);
+  color:var(--text);font-size:12px;font-weight:600;white-space:nowrap}
+.mini-btn--accent{border-color:var(--accent-border);background:var(--accent-soft);color:var(--accent)}
+.mini-btn--ghost{color:var(--muted)}
+.mini-btn .ic{width:13px;height:13px}
+
+/* ============================================================
+   3. 域名卡片墙 / 卡片
+   ============================================================ */
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card{min-width:0;padding:16px;border:1px solid var(--border);border-radius:var(--r-md);
+  background:var(--surface);box-shadow:0 1px 2px rgba(28,37,54,.03)}
+.card:hover{border-color:var(--border-strong);box-shadow:var(--sh-sm)}
+.card--special{background:var(--surface-3)}
+.card-head{display:flex;align-items:center;gap:11px;min-width:0}
+.fav{flex:0 0 34px;width:34px;height:34px;border-radius:4px;background:var(--fav-bg);
+  color:var(--fav-ink);display:grid;place-items:center;font-size:15px;font-weight:700}
+.fav--special{background:#eef1f6;color:#7a8699}
+.meta{min-width:0;flex:1}
+.domain{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat{color:var(--muted);font-size:12px;white-space:nowrap;margin-top:1px}
+.card-tools{flex:0 0 auto;margin-left:auto;display:flex;gap:3px}
+.tool{display:grid;place-items:center;width:27px;height:27px;padding:0;
+  border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted)}
+.tool--scope:hover{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-border)}
+.tool--del:hover{color:var(--danger);background:var(--danger-soft);border-color:var(--danger-border)}
+.pages{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--border)}
+.pages li{border-bottom:1px solid var(--line-soft)}
+.pages li:last-child{border-bottom:none}
+.page-link{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:7px 2px;color:var(--text);text-decoration:none;border-radius:4px;cursor:default}
+.p-title{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.p-time{flex:0 0 auto;color:var(--muted);font-size:11px;white-space:nowrap}
+/* 书签行：标题 + 时间 + 面包屑 */
+.bm-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.bm-title{min-width:0;flex:1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  white-space:normal;line-height:1.4;overflow:hidden;overflow-wrap:anywhere;
+  font-size:13px;color:var(--text);text-decoration:none;cursor:default}
+.bm-time{flex:0 0 auto;color:var(--muted);font-size:11px;white-space:nowrap}
+.bm-crumb{display:flex;align-items:center;gap:5px;margin:1px 0 0;color:var(--muted);
+  font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm-crumb .ic{width:11px;height:11px;flex:none;color:#9aa5b5}
+.bm-url{color:#98a2b3;font:10.5px/1.5 var(--font-mono);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin:1px 0 0}
+.more{display:block;margin-top:10px;padding:0;border:none;background:none;
+  color:var(--accent);font:inherit;font-size:12px}
+.footer-actions{display:flex;align-items:center;gap:14px;margin-top:22px}
+.btn{padding:8px 16px;border:1px solid var(--border-strong);border-radius:4px;
+  background:var(--surface);color:var(--text);font:inherit;font-size:13px}
+.hint{color:var(--muted);font-size:12px}
+.tail-section{margin-top:24px;padding-top:18px;border-top:1px solid var(--border)}
+.tail-toggle{padding:6px 12px;border:1px dashed var(--border-strong);border-radius:4px;
+  background:transparent;color:var(--muted);font:inherit;font-size:12px}
+.footnote{margin:26px 0 0;color:#9aa5b5;font-size:11.5px;text-align:center;line-height:1.7}
+/* 对照要点条（画板底部，仅提案页使用） */
+.callout{display:flex;gap:10px;align-items:flex-start;margin-top:18px;padding:11px 14px;
+  background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--r-sm);
+  font-size:12px;color:var(--text);line-height:1.7}
+.callout .ic{color:var(--accent);margin-top:2px;flex:none}
+.callout b{color:var(--accent);font-weight:650}
+.diffbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.diffchip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:var(--r-pill);
+  border:1px solid var(--border);background:var(--surface-2);font-size:11.5px;color:var(--muted)}
+.diffchip .ic{width:13px;height:13px}
+.diffchip b{color:var(--text);font-weight:600}
+.diffchip--no{background:var(--surface-3);text-decoration:line-through;color:#9aa5b5}
+
+/* ============================================================
+   4. 行 hover 菜单 / 放大特写
+   ============================================================ */
+.zoom-wrap{padding:26px 28px 30px;background:var(--bg)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-pill);padding:4px 11px}
+.legend i{width:8px;height:8px;border-radius:2px;display:block}
+.zoom-row{position:relative;display:flex;align-items:center;gap:14px;padding:18px 18px;
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-md);
+  box-shadow:var(--sh-sm)}
+.zoom-row.is-hover{background:#f7f9fd;border-color:var(--accent-border)}
+.zoom-body{flex:1;min-width:0}
+.zoom-title{font-size:18px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zoom-url{color:var(--muted);font:12px/1.6 var(--font-mono);margin-top:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zoom-foot{display:flex;align-items:center;gap:16px;margin-top:8px}
+.zoom-crumb{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.zoom-crumb .ic{color:#9aa5b5}
+.zoom-time{color:var(--muted);font-size:12px}
+.zoom-ops{display:flex;align-items:center;gap:6px;flex:none}
+.op-btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;
+  border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);
+  color:var(--text);font-size:12.5px;font-weight:600}
+.op-btn .ic{width:14px;height:14px}
+.op-btn--icon{width:34px;padding:0;justify-content:center}
+.op-btn--del{color:var(--danger);border-color:var(--danger-border);background:var(--danger-soft)}
+.zoom-menu{width:230px;flex:none;padding:6px;background:var(--surface);
+  border:1px solid var(--border-strong);border-radius:var(--r-sm);box-shadow:var(--sh-pop)}
+.zoom-menu__item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;
+  border:0;border-radius:var(--r-xs);background:transparent;color:var(--text);
+  font-size:13px;text-align:left}
+.zoom-menu__item .ic{color:var(--muted)}
+.zoom-menu__item:hover{background:var(--surface-2)}
+.zoom-menu__item--del{color:var(--danger)}
+.zoom-menu__item--del .ic{color:var(--danger)}
+.zoom-menu__item--icon{width:34px;justify-content:center;padding:9px 0}
+.zoom-menu__sep{height:1px;background:var(--border);margin:5px 6px}
+.zoom-menu__head{font-size:11px;color:var(--muted);padding:4px 10px 6px}
+.zoom-note{display:flex;gap:10px;margin-top:16px;font-size:12px;color:var(--muted);line-height:1.7}
+.zoom-note .ic{color:var(--accent);flex:none;margin-top:2px}
+
+/* ============================================================
+   5. 两步确认条（统计中 / 确认删除）
+   ============================================================ */
+.phase{margin-bottom:22px}
+.phase:last-child{margin-bottom:0}
+.phase-label{display:flex;align-items:center;gap:9px;margin-bottom:12px;font-size:13px;font-weight:650}
+.phase-label .pn{width:22px;height:22px;display:grid;place-items:center;border-radius:4px;
+  background:var(--accent-soft);color:var(--accent);font:700 11px var(--font-mono)}
+.phase-label span{font-weight:450;color:var(--muted);font-size:12px}
+.phase-card{padding:16px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface)}
+.phase-row{display:flex;align-items:center;gap:11px;padding:0 2px 12px}
+.phase-row .fav{width:30px;height:30px;flex-basis:30px;font-size:13px}
+.phase-row .t1{font-size:13px;font-weight:600}
+.phase-row .t2{font-size:11px;color:var(--muted)}
+.del-bar{padding:12px 14px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2)}
+.del-bar.is-danger{border-color:var(--danger-border);background:var(--danger-soft)}
+.del-text{font-size:12.5px;line-height:1.65;color:var(--text);display:flex;align-items:center;gap:9px}
+.del-text .ic{color:var(--muted);flex:none}
+.del-bar.is-danger .del-text{color:var(--danger-ink);font-weight:500}
+.del-bar.is-danger .del-text .ic{color:var(--danger)}
+.del-text b{font-weight:700}
+.del-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:11px}
+.del-cancel,.del-go{padding:5px 14px;border-radius:4px;font:inherit;font-size:12px;font-weight:600}
+.del-cancel{border:1px solid var(--border-strong);background:var(--surface);color:var(--text)}
+.del-go{border:1px solid var(--danger);background:var(--danger);color:#fff}
+.del-go:disabled{opacity:.45}
+.spinner{width:15px;height:15px;flex:none;border:2px solid var(--accent-border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============================================================
+   6. 树形弹层
+   ============================================================ */
+.overlay-demo{position:relative;padding:34px 28px 40px;background:var(--bg);
+  display:flex;justify-content:center}
+.overlay-demo::before{content:"";position:absolute;inset:0;background:rgba(28,37,54,.10)}
+.tree-dialog{position:relative;width:720px;background:var(--surface);
+  border:1px solid var(--border-strong);border-radius:var(--r-lg);box-shadow:var(--sh-pop);overflow:hidden}
+.tree-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.tree-head h3{margin:0;font-size:16px;font-weight:650}
+.tree-head p{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
+.tree-head .mini-btn{margin-left:auto}
+.tree-head .tree-x{width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--border);
+  border-radius:4px;background:var(--surface);color:var(--muted)}
+.tree-body{padding:10px 12px}
+.tree-node{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:4px;font-size:13px}
+.tree-node:hover{background:var(--surface-2)}
+.tree-node.is-sel{background:var(--accent-soft);border:1px solid var(--accent-border)}
+.tree-node .tw{width:16px;flex:none;color:var(--muted);display:grid;place-items:center}
+.tree-node .ficon{width:17px;height:17px;color:var(--accent)}
+.tree-node .ficon--empty{color:#9aa5b5}
+.tree-node .name{font-weight:600;white-space:nowrap}
+.tree-node .cnt{font-size:11px;color:var(--muted);white-space:nowrap}
+.tag-lock{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-pill);padding:1px 8px}
+.tag-empty{font-size:10px;color:#9aa5b5;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--r-pill);padding:1px 8px}
+.tree-ops{margin-left:auto;display:flex;gap:2px}
+.tree-op{width:24px;height:24px;display:grid;place-items:center;border:1px solid transparent;
+  border-radius:4px;background:transparent;color:var(--muted)}
+.tree-op:hover{background:var(--surface);border-color:var(--border)}
+.tree-op .ic{width:13px;height:13px}
+.tree-op.is-locked{color:#c2cad6;cursor:not-allowed}
+.tree-op.is-del{color:var(--danger)}
+.tree-child{position:relative;margin-left:26px;padding-left:16px;border-left:1px dashed var(--border-strong)}
+.tree-child .tree-node::before{content:"";position:absolute;left:-16px;top:50%;width:14px;
+  height:1px;border-top:1px dashed var(--border-strong)}
+.tree-foot{display:flex;align-items:center;gap:8px;padding:11px 20px;border-top:1px solid var(--border);
+  background:var(--surface-2);font-size:11.5px;color:var(--muted)}
+.tree-foot .ic{color:var(--accent)}
+.toast{position:absolute;right:26px;bottom:24px;display:inline-flex;align-items:center;gap:9px;
+  padding:11px 15px;background:var(--text);color:#fff;border-radius:4px;font-size:12.5px;
+  box-shadow:var(--sh-pop);z-index:2}
+.toast .ic{color:#8fe0b0}
+
+/* ============================================================
+   7. 文件夹作用域 / 全宽结果列表
+   ============================================================ */
+.scope-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:18px}
+.scope-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 12px;
+  border:1px solid var(--accent-border);border-radius:var(--r-pill);
+  background:var(--accent-soft);color:var(--accent);font-size:13px}
+.scope-chip strong{font-weight:650}
+.scope-chip .x{width:20px;height:20px;border:0;border-radius:50%;
+  background:rgba(29,78,216,.12);color:var(--accent);font-size:15px;line-height:1;
+  display:grid;place-items:center}
+.scope-tip{color:var(--muted);font-size:12px}
+.scope-open{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;
+  border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);
+  color:var(--text);font-size:12px}
+.scope-open .ic{width:13px;height:13px}
+.detail-list{list-style:none;margin:0;padding:0;border:1px solid var(--border);
+  border-radius:var(--r-md);background:var(--surface);overflow:hidden}
+.detail-row{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid var(--line-soft)}
+.detail-row:last-child{border-bottom:none}
+.detail-row:hover{background:var(--surface-2)}
+.d-ic{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:4px;
+  background:var(--fav-bg);color:var(--fav-ink);font-size:13px;font-weight:700}
+.detail-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+.d-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d-url{color:var(--muted);font:11px/1.5 var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d-crumb{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;margin-top:2px}
+.d-crumb .ic{width:11px;height:11px;color:#9aa5b5}
+.d-meta{flex:0 0 auto;color:var(--muted);font-size:11px;white-space:nowrap}
+.view-flag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--accent-border);border-radius:var(--r-pill);
+  padding:3px 11px;margin-bottom:14px}
+
+/* ============================================================
+   8. 空态 / 详情页 / 边界
+   ============================================================ */
+.empty{padding:44px 20px;text-align:center;color:var(--muted);
+  border:1px dashed var(--border-strong);border-radius:var(--r-md);background:var(--surface)}
+.empty .ic{width:30px;height:30px;color:#b7c0cf}
+.empty h4{margin:12px 0 4px;font-size:15px;font-weight:650;color:var(--text)}
+.empty p{margin:0;font-size:12.5px;line-height:1.7}
+.subhead{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;font-weight:650}
+.subhead::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--accent)}
+.subhead span{font-weight:450;color:var(--muted);font-size:11.5px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.block{margin-bottom:24px}
+.block:last-child{margin-bottom:0}
+.detail-back{padding:7px 12px;border:1px solid var(--border-strong);border-radius:4px;
+  background:var(--surface);color:var(--text);font:inherit;font-size:13px;white-space:nowrap}
+.detail-heading{min-width:0}
+.detail-heading h1{margin:0;font-size:16px;font-weight:650}
+.detail-sub{color:var(--muted);font-size:12px}
+.tag-readonly{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+  color:var(--muted);background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--r-pill);padding:3px 10px}
+.detail-note{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.7}
+.detail-note b{color:var(--text)}
+.rule-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rule-list li{display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.65;
+  color:var(--text);background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:10px 12px}
+.rule-list .ic{color:var(--accent);flex:none;margin-top:2px}
+.rule-list code{font:11px var(--font-mono);color:var(--accent);
+  background:var(--accent-soft);border-radius:3px;padding:1px 5px}
+.lock-row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);margin-top:8px}
+.lock-row .ic{width:13px;height:13px}
+
+/* ============================================================
+   9. s10 设计说明 / token 表
+   ============================================================ */
+.doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.panel{min-width:0}
+.panel h4{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:13px;font-weight:650}
+.panel h4::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--accent)}
+.sw-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.sw{border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
+.sw__c{height:38px;border-bottom:1px solid var(--border)}
+.sw__m{padding:7px 8px;height:44px;overflow:hidden}
+.sw__n{display:block;font-size:10.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw__h{display:block;font:10px var(--font-mono);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.type-row{display:flex;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.type-row:last-child{border-bottom:0}
+.type-row__s{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.type-row__t{font:10.5px var(--font-mono);color:var(--muted);white-space:nowrap}
+.spec-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:4px}
+.spec{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:10px;text-align:center}
+.spec b{display:block;font:600 12px var(--font-mono);color:var(--accent)}
+.spec span{font-size:10.5px;color:var(--muted)}
+.note-line{font-size:11.5px;color:var(--muted);line-height:1.7;margin:12px 0 0}
+table.diff{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+table.diff th,table.diff td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.55}
+table.diff thead th{background:var(--surface-2);font-weight:650;color:var(--text);font-size:12px}
+table.diff thead th.h-accent{background:var(--accent-soft);color:var(--accent)}
+table.diff td:first-child{font-weight:600;color:var(--text);white-space:nowrap;background:var(--surface-3)}
+table.diff td .no{color:#9aa5b5}
+table.diff td .yes{color:var(--accent);font-weight:600}
+.boundary{margin-top:18px;padding:12px 15px;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--r-sm);font-size:11.5px;color:var(--muted);line-height:1.75}
+.boundary b{color:var(--text)}
+/* ============================================================
+   3b. §16.13 书签文件夹卡片墙（新增组件，圆角沿用 3 / 4px）
+   ============================================================ */
+.fav--folder{background:var(--accent-soft);color:var(--accent);
+  border:1px solid var(--accent-border)}
+.fav--folder .ic{width:18px;height:18px}
+.bm-card-path{display:flex;align-items:center;gap:5px;margin:9px 0 0;
+  color:var(--muted);font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.bm-card-path .ic{width:11px;height:11px;flex:none;color:#9aa5b5}
+/* 卡片头工具组：四枚图标默认常显，贴右上角、与文件夹图标同一水平带。
+   1 + 3 分组：放大镜（只读查看）| 改名 / 新建子文件夹 / 删除（危险项最右）。
+   默认低对比度安静淡显，hover 卡片整体提亮，hover 单按钮才着色。 */
+.card-tools:has(.bm-folder-ops){align-self:flex-start;margin-top:5px;gap:2px}
+.card-tools:has(.bm-folder-ops) .tool--scope{width:24px;height:24px;
+  border-color:transparent;background:transparent;color:#78849a}
+.bm-folder-ops{display:inline-flex;align-items:center;gap:2px;margin:0 0 0 6px;
+  padding-left:6px;border-left:1px solid var(--border);flex-wrap:nowrap;opacity:1}
+.card-tools .bm-op--icon{width:24px;height:24px;border-color:transparent;
+  background:transparent;color:#8490a3}
+.card:hover .card-tools .bm-op--icon{color:var(--muted)}
+.card-tools .bm-op--icon.bm-op--del{color:#b47d76}
+.card:hover .card-tools .bm-op--icon.bm-op--del{color:var(--danger)}
+.card-tools .bm-op--icon.is-ghost{opacity:.32;background:transparent;border-color:transparent}
+.card-tools .bm-op--icon:hover{color:var(--accent);background:var(--accent-soft);
+  border-color:var(--accent-border)}
+.card-tools .bm-op--icon.bm-op--del:hover{color:var(--danger);background:var(--danger-soft);
+  border-color:var(--danger-border)}
+.bm-op{padding:2px 7px;border:1px solid var(--border);border-radius:var(--r-xs);
+  background:var(--surface);color:var(--muted);font:inherit;font-size:10.5px;white-space:nowrap}
+.bm-op.is-ghost{background:var(--surface-3);color:#9aa5b5;opacity:.72}
+.bm-op--del:hover{color:var(--danger);border-color:var(--danger-border);background:var(--danger-soft)}
+.bm-op--icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;flex:none}
+.bm-op--icon .ic{width:14px;height:14px;display:block}
+.bm-op--icon.bm-op--del{color:#a8514a}
+.bm-op--icon.is-ghost{background:var(--surface-3);color:#9aa5b5;opacity:.72}
+.bm-host{margin:1px 0 0;color:#98a2b3;font:10.5px/1.5 var(--font-mono);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bm-card-empty{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:11px 0 0;
+  padding:9px 11px;border:1px dashed var(--border-strong);border-radius:var(--r-sm);
+  background:var(--surface-3);color:var(--muted);font-size:11.5px}
+.bm-subs{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;
+  padding-top:10px;border-top:1px solid var(--border)}
+.bm-subs-label{color:var(--muted);font-size:10.5px;margin-right:2px}
+.bm-sub{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:3px 9px;
+  border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface-2);
+  color:var(--text);font:inherit;font-size:10.5px;white-space:nowrap}
+.bm-sub .ic{width:11px;height:11px;flex:none;color:var(--muted)}
+.bm-sub b{color:var(--muted);font-weight:500}
+/* 卡片头四枚图标默认常显，静态稿与真实界面一致（不再靠 hover 才出现） */
+</style>
+</head>
+<body>
+
+<!-- ============ 内联 SVG 图标 sprite（零外链，无脚本） ============ -->
+<svg class="sprite" aria-hidden="true"><defs>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="M15.5 15.5L20 20"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7M6.5 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4l.8-12M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3.6 9.2A8.5 8.5 0 1 1 4 15"/><path d="M3.5 4.5v5h5"/><path d="M12 7.6V12l3 1.8"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 6.5a1 1 0 0 1 1-1h4.4l2 2h9.6a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-16a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M9 5.5l6 6.5-6 6.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V7.6a3.5 3.5 0 0 1 7 0v2.9"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L18.8 9.2a2 2 0 0 0-2.8-2.8L5.2 17.2 4 20z"/><path d="M14.8 7.2l2.8 2.8"/></symbol>
+  <symbol id="i-move" viewBox="0 0 24 24"><path d="M4 8h12l-3-3M20 16H8l3 3"/><path d="M16 5h3.5v3.5"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M13 5h6v6M19 5l-9 9M18 13.5V18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4.5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.3"/><path d="M12 7.5V12l3 1.8"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.3"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.3"/><path d="M6 6l12 12"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.2l7 2.6v5.4c0 4.5-2.9 7.8-7 9.6-4.1-1.8-7-5.1-7-9.6V5.8z"/><path d="M9.2 12l2 2 3.6-3.8"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 5.5h16v13H4z"/><path d="M4 13h4l1.5 2.5h5L16 13h4"/></symbol>
+</defs></svg>
+
+<div class="doc-top">
+  <div><span class="badge">v1.3.0 设计提案</span><span class="badge">§16.13 修订 · 书签按文件夹排列</span><span class="badge">静态稿 · 零脚本 · 零外链</span></div>
+  <h1 style="margin-top:12px">网迹 · 历史 / 书签 双 tab 全状态视觉稿<small>10 个状态 · 1400px 画板 · 示意假数据</small></h1>
+  <p>顶栏分段控件切换两个 tab：<b>历史按域名聚合</b>，<b>书签按你在浏览器里整理的文件夹聚合</b>（一张卡片 = 一个文件夹，按书签树顺序排列）。以下为完整静态呈现，所有控件无行为；配色、字号、间距沿用现有 <b>styles.css</b> 浅色 token。</p>
+</div>
+
+<!-- =====================================================================
+     s01 历史 tab · 默认首屏（对照基准）
+     ===================================================================== -->
+<section class="board" id="s01" data-shot="01-history-default">
+  <div class="board-head">
+    <div class="bno">01</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">历史 tab · 默认首屏<em>s01 / history-default · 切换不跳变的对照基准</em></h2>
+      <p class="bhead-notes">保留现有纯历史卡片墙形态：<b>卡片右上角「放大镜 + 垃圾桶」</b>（域内搜索 / 按域名清除历史）；统计行为「N 页 · N 次 · X 前」。底部有「加载全部域名」与长尾折叠——这两项是<b>历史 tab 专属</b>，书签 tab 不再有。</p>
+    </div>
+    <div class="bhead-tag bhead-tag--neutral"><svg class="ic ic--sm"><use href="#i-history"/></svg> 历史 tab</div>
+  </div>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark"></span><h1>网迹</h1></div>
+      <div class="seg">
+        <button type="button" class="is-active"><svg class="ic ic--sm"><use href="#i-history"/></svg>历史</button>
+        <button type="button"><svg class="ic ic--sm"><use href="#i-bookmark"/></svg>书签</button>
+      </div>
+      <div class="search"><svg class="ic ic--sm"><use href="#i-search"/></svg>
+        <input type="text" placeholder="搜索域名或页面标题" /><span class="kbd">Alt+H</span></div>
+      <div class="topstat">6 个域名</div>
+    </div>
+    <div class="statusbar">
+      <div class="sb-info"><span class="dot"></span>约 90 天浏览历史 · <b>按最近访问排序</b> · 首屏展示高频域名卡片</div>
+    </div>
+    <div class="pad">
+      <div class="grid">
+        <!-- 历史卡片 1 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav">E</div>
+            <div class="meta"><div class="domain">example.com</div><div class="stat">8 页 · 34 次 · 2 小时前</div></div>
+            <div class="card-tools">
+              <button class="tool tool--scope" type="button" title="仅在此域名内搜索"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+              <button class="tool tool--del" type="button" title="清除该域名的全部历史"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <ul class="pages">
+            <li><div class="page-link"><span class="p-title">示例公司 — 首页</span><span class="p-time">2 小时前</span></div></li>
+            <li><div class="page-link"><span class="p-title">产品概览 / Overview</span><span class="p-time">昨天</span></div></li>
+            <li><div class="page-link"><span class="p-title">定价方案</span><span class="p-time">3 天前</span></div></li>
+          </ul>
+          <button class="more" type="button">查看全部 8 页</button>
+        </article>
+        <!-- 历史卡片 2 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav">D</div>
+            <div class="meta"><div class="domain">docs.example.com</div><div class="stat">12 页 · 51 次 · 昨天</div></div>
+            <div class="card-tools">
+              <button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+              <button class="tool tool--del" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <ul class="pages">
+            <li><div class="page-link"><span class="p-title">API 参考 · Authentication</span><span class="p-time">昨天</span></div></li>
+            <li><div class="page-link"><span class="p-title">快速开始 Quickstart</span><span class="p-time">2 天前</span></div></li>
+            <li><div class="page-link"><span class="p-title">Webhooks 指南</span><span class="p-time">4 天前</span></div></li>
+          </ul>
+          <button class="more" type="button">在新页查看全部 12 页 ↗</button>
+        </article>
+        <!-- 历史卡片 3 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav">G</div>
+            <div class="meta"><div class="domain">github.com</div><div class="stat">5 页 · 19 次 · 3 小时前</div></div>
+            <div class="card-tools">
+              <button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+              <button class="tool tool--del" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <ul class="pages">
+            <li><div class="page-link"><span class="p-title">example / demo-repo</span><span class="p-time">3 小时前</span></div></li>
+            <li><div class="page-link"><span class="p-title">Pull requests</span><span class="p-time">昨天</span></div></li>
+            <li><div class="page-link"><span class="p-title">Issues · label:docs</span><span class="p-time">2 天前</span></div></li>
+          </ul>
+          <button class="more" type="button">查看全部 5 页</button>
+        </article>
+        <!-- 历史卡片 4 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav">S</div>
+            <div class="meta"><div class="domain">stackoverflow.com</div><div class="stat">3 页 · 7 次 · 5 天前</div></div>
+            <div class="card-tools">
+              <button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+              <button class="tool tool--del" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <ul class="pages">
+            <li><div class="page-link"><span class="p-title">How to parse a URL in JS</span><span class="p-time">5 天前</span></div></li>
+            <li><div class="page-link"><span class="p-title">CSS grid auto-fill</span><span class="p-time">6 天前</span></div></li>
+            <li><div class="page-link"><span class="p-title">MV3 service worker</span><span class="p-time">8 天前</span></div></li>
+          </ul>
+        </article>
+        <!-- 历史卡片 5 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav">M</div>
+            <div class="meta"><div class="domain">developer.mozilla.org</div><div class="stat">9 页 · 22 次 · 4 天前</div></div>
+            <div class="card-tools">
+              <button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+              <button class="tool tool--del" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <ul class="pages">
+            <li><div class="page-link"><span class="p-title">Web APIs · IndexedDB</span><span class="p-time">4 天前</span></div></li>
+            <li><div class="page-link"><span class="p-title">Array.prototype.flatMap()</span><span class="p-time">5 天前</span></div></li>
+            <li><div class="page-link"><span class="p-title">CSS :has() 选择器</span><span class="p-time">1 周前</span></div></li>
+          </ul>
+          <button class="more" type="button">查看全部 9 页</button>
+        </article>
+        <!-- 历史卡片 6 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav">N</div>
+            <div class="meta"><div class="domain">news.example.org</div><div class="stat">2 页 · 3 次 · 1 周前</div></div>
+            <div class="card-tools">
+              <button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+              <button class="tool tool--del" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <ul class="pages">
+            <li><div class="page-link"><span class="p-title">每周技术摘要 #42</span><span class="p-time">1 周前</span></div></li>
+            <li><div class="page-link"><span class="p-title">社区动态</span><span class="p-time">2 周前</span></div></li>
+          </ul>
+        </article>
+      </div>
+      <div class="footer-actions">
+        <button class="btn" type="button">加载全部域名</button>
+        <span class="hint">首屏仅展示最近的高频域名</span>
+      </div>
+      <div class="tail-section">
+        <button class="tail-toggle" type="button">其它 18 个域名（长尾折叠）</button>
+      </div>
+      <p class="footnote">数据来自浏览器自身的历史记录（约 90 天）。卡片右上角垃圾桶按域名清除历史，不可恢复。</p>
+    </div>
+  </div>
+  <div style="padding:0 24px 22px">
+    <div class="callout"><svg class="ic ic--sm"><use href="#i-info"/></svg>
+      <div><b>对照基准要点：</b>历史卡右上角是「放大镜（域内搜索）+ 垃圾桶（按域名清除历史）」两个工具；统计行含「N 次」访问次数；底部有「加载全部域名」与长尾折叠。切到书签 tab 时，顶栏与卡片墙<b>结构不动</b>，仅字段与工具按 tab 语义替换。</div></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s02 书签 tab · 默认首屏
+     ===================================================================== -->
+<section class="board" id="s02" data-shot="02-bookmark-default">
+  <div class="board-head">
+    <div class="bno">02</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">书签 tab · 文件夹卡片墙首屏<em>s02 / bookmark-default · §16.13 修订后的主视图</em></h2>
+      <p class="bhead-notes">主视图<b>按书签文件夹排列</b>：<b>一张卡片 = 一个文件夹</b>，顺序即 Chrome 书签树顺序（不按时间倒序），让用户按自己整理的分类找内容。卡片头有<b>完整路径面包屑</b>与「N 个书签 · M 个子文件夹」；卡片内<b>只放直属书签</b>；<b>子文件夹做成可点入口 chips</b> 逐层下钻；空文件夹也显示为空卡片。行内第二行改显示域名。写操作在<b>卡片头右上角工具组（默认常显）</b>、行 hover 菜单与状态行右侧。</p>
+    </div>
+    <div class="bhead-tag"><svg class="ic ic--sm"><use href="#i-folder"/></svg> 书签 tab</div>
+  </div>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark"></span><h1>网迹</h1></div>
+      <div class="seg">
+        <button type="button"><svg class="ic ic--sm"><use href="#i-history"/></svg>历史</button>
+        <button type="button" class="is-active"><svg class="ic ic--sm"><use href="#i-bookmark"/></svg>书签</button>
+      </div>
+      <div class="search"><svg class="ic ic--sm"><use href="#i-search"/></svg>
+        <input type="text" placeholder="搜索书签标题、网址或文件夹" /><span class="kbd">多词 AND</span></div>
+      <div class="topstat">24 个书签</div>
+    </div>
+    <div class="statusbar">
+      <div class="sb-info"><span class="dot"></span>共 <b>8 个文件夹 · 24 个书签</b> · 按<b>书签文件夹排列</b>（树顺序） · 文件夹路径显示在卡片头</div>
+      <div class="sb-actions">
+        <button class="mini-btn mini-btn--accent" type="button"><svg class="ic"><use href="#i-plus"/></svg>新建书签</button>
+        <button class="mini-btn" type="button"><svg class="ic"><use href="#i-plus"/></svg>新建文件夹</button>
+        <button class="mini-btn mini-btn--ghost" type="button"><svg class="ic"><use href="#i-folder"/></svg>文件夹</button>
+      </div>
+    </div>
+    <div class="pad">
+      <div class="grid">
+        <!-- 1 · 书签栏（内置锁定：改名 / 删除置灰，可 + 子文件夹） -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">书签栏</div><div class="stat">2 个书签 · 3 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button" title="仅在此文件夹内搜索书签"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon is-ghost" type="button" disabled title="内置文件夹不可改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon is-ghost" type="button" disabled title="内置文件夹不可删除" aria-label="删除"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 <span class="tag-lock" style="margin-left:4px">内置 · 锁定</span></div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">示例公司 — 首页</span><span class="bm-time">添加于 2 天前</span></div>
+              <div class="bm-host">example.com</div></li>
+            <li><div class="bm-top"><span class="bm-title">产品概览 / Overview</span><span class="bm-time">添加于 1 周前</span></div>
+              <div class="bm-host">example.com</div></li>
+          </ul>
+          <div class="bm-subs"><span class="bm-subs-label">子文件夹</span>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>常用 <b>3</b></button>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>开发 <b>14</b></button>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>阅读清单 <b>2</b></button>
+          </div>
+        </article>
+        <!-- 2 · 开发（有直属书签 + 子文件夹） -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">开发</div><div class="stat">1 个书签 · 4 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon " type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon bm-op--del" type="button" title="删除文件夹" aria-label="删除文件夹"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">团队开发规范</span><span class="bm-time">添加于 3 天前</span></div>
+              <div class="bm-host">developer.example.com</div></li>
+          </ul>
+          <div class="bm-subs"><span class="bm-subs-label">子文件夹</span>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>文档 <b>6</b></button>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>工具 <b>3</b></button>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>产品 <b>2</b></button>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>代码 <b>3</b></button>
+          </div>
+        </article>
+        <!-- 3 · 文档（直属书签 > 10 时给新页入口） -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">文档</div><div class="stat">14 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon " type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon bm-op--del" type="button" title="删除文件夹" aria-label="删除文件夹"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 文档</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">API 参考 · Authentication</span><span class="bm-time">添加于 昨天</span></div>
+              <div class="bm-host">docs.example.com</div></li>
+            <li><div class="bm-top"><span class="bm-title">快速开始 Quickstart</span><span class="bm-time">添加于 3 天前</span></div>
+              <div class="bm-host">docs.example.com</div></li>
+            <li><div class="bm-top"><span class="bm-title">Webhooks 指南</span><span class="bm-time">添加于 1 周前</span></div>
+              <div class="bm-host">docs.example.com</div></li>
+          </ul>
+          <button class="more" type="button">在新页查看全部 14 个书签 ↗</button>
+        </article>
+        <!-- 4 · 工具（含特殊协议，只展示不打开） -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">工具</div><div class="stat">2 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon " type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon bm-op--del" type="button" title="删除文件夹" aria-label="删除文件夹"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 工具</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">Web APIs 参考手册</span><span class="bm-time">添加于 5 天前</span></div>
+              <div class="bm-host">developer.example.com</div></li>
+            <li><div class="bm-top"><span class="bm-title">CSS :has() 选择器</span><span class="bm-time">添加于 3 周前</span></div>
+              <div class="bm-host">developer.example.com</div></li>
+            <li><div class="bm-top"><span class="bm-title">页面取词小工具</span><span class="bm-time">只展示</span></div>
+              <div class="bm-host">本地 / 其他 · javascript: 不打开</div></li>
+          </ul>
+        </article>
+        <!-- 5 · 空文件夹（仍显示为空卡片） -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">空文件夹</div><div class="stat">0 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon " type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon bm-op--del" type="button" title="删除文件夹" aria-label="删除文件夹"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 空文件夹</div>
+          <div class="bm-card-empty"><svg class="ic ic--sm"><use href="#i-folder"/></svg>此文件夹暂无书签
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button></div>
+        </article>
+        <!-- 6 · 其他书签 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">其他书签</div><div class="stat">1 个书签 · 1 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon is-ghost" type="button" disabled title="内置文件夹不可改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon is-ghost" type="button" disabled title="内置文件夹不可删除" aria-label="删除"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>其他书签 <span class="tag-lock" style="margin-left:4px">内置 · 锁定</span></div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">定价方案</span><span class="bm-time">添加于 3 周前</span></div>
+              <div class="bm-host">example.com</div></li>
+          </ul>
+          <div class="bm-subs"><span class="bm-subs-label">子文件夹</span>
+            <button class="bm-sub" type="button"><svg class="ic"><use href="#i-folder"/></svg>待读 <b>1</b></button>
+          </div>
+        </article>
+        <!-- 7 · 待读 -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">待读</div><div class="stat">1 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon " type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon bm-op--del" type="button" title="删除文件夹" aria-label="删除文件夹"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>其他书签 / 待读</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">How to parse a URL in JS</span><span class="bm-time">添加于 2 周前</span></div>
+              <div class="bm-host">stackoverflow.com</div></li>
+          </ul>
+        </article>
+        <!-- 8 · 移动端书签（内置但可改） -->
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">移动端书签</div><div class="stat">1 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button>
+            <div class="bm-folder-ops">
+            <button class="bm-op bm-op--icon " type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="bm-op bm-op--icon " type="button" title="新建子文件夹" aria-label="新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="bm-op bm-op--icon bm-op--del" type="button" title="删除文件夹" aria-label="删除文件夹"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>移动端书签 <span class="tag-lock" style="margin-left:4px">内置 · 可改</span></div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">Issues · 我的关注</span><span class="bm-time">添加于 1 个月前</span></div>
+              <div class="bm-host">github.com</div></li>
+          </ul>
+        </article>
+      </div>
+      <p class="footnote">卡片按 Chrome 书签树前序排列（用户自己整理的顺序），不按「最近添加」倒序；统计与行内时间仍写「添加于 X 前」，不出现访问次数。点击卡片右上角放大镜进入「仅在此文件夹内搜索」，点子文件夹 chip 逐层下钻。</p>
+    </div>
+  </div>
+  <div style="padding:0 24px 22px">
+    <div class="diffbar">
+      <span class="diffchip"><svg class="ic"><use href="#i-folder"/></svg><b>一张卡片 = 一个文件夹</b></span>
+      <span class="diffchip"><svg class="ic"><use href="#i-list"/></svg><b>顺序 = 书签树顺序</b></span>
+      <span class="diffchip"><svg class="ic"><use href="#i-folder"/></svg><b>卡片内只放直属书签</b></span>
+      <span class="diffchip"><svg class="ic"><use href="#i-grid"/></svg><b>子文件夹 = 可点 chips</b></span>
+      <span class="diffchip"><svg class="ic"><use href="#i-search"/></svg><b>卡片右上：放大镜 + 管理图标组</b></span>
+      <span class="diffchip diffchip--no"><svg class="ic"><use href="#i-trash"/></svg>按域名聚合 / 卡片批量删除</span>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s03 书签 tab · 行 hover 菜单
+     ===================================================================== -->
+<section class="board" id="s03" data-shot="03-row-hover-menu">
+  <div class="board-head">
+    <div class="bno">03</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">书签 tab · 行 hover 菜单<em>s03 / row-hover-menu · 放大展示一行（文件夹卡片内）</em></h2>
+      <p class="bhead-notes">写操作<b>只在行 hover 菜单</b>：改名 / 移动到… / 删除。放大一行完整呈现「标题 / URL / 域名 / 时间 / 右侧三个操作」；文件夹信息已在卡片头，行内第二行改显示域名。</p>
+    </div>
+    <div class="bhead-tag"><svg class="ic ic--sm"><use href="#i-pencil"/></svg> 行内写入口</div>
+  </div>
+  <div class="zoom-wrap">
+    <div class="legend">
+      <span><i style="background:var(--text)"></i>标题</span>
+      <span><i style="background:var(--muted)"></i>URL</span>
+      <span><i style="background:var(--accent)"></i>域名（行内第二行）</span>
+      <span><i style="background:#9aa5b5"></i>添加时间</span>
+      <span><i style="background:var(--danger)"></i>危险操作</span>
+    </div>
+
+    <!-- 放大行 + 浮现操作 -->
+    <div class="zoom-row is-hover">
+      <div class="fav" style="flex-basis:40px;width:40px;height:40px;font-size:17px">D</div>
+      <div class="zoom-body">
+        <div class="zoom-title">Web APIs 参考手册</div>
+        <div class="zoom-url">https://developer.example.com/docs/Web/API</div>
+        <div class="zoom-foot">
+          <span class="zoom-crumb"><svg class="ic ic--sm"><use href="#i-code"/></svg>developer.example.com</span>
+          <span class="zoom-time">添加于 5 天前</span>
+        </div>
+      </div>
+      <div class="zoom-ops">
+        <button class="op-btn op-btn--icon" type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+        <button class="op-btn op-btn--icon" type="button" title="移动到…" aria-label="移动到…"><svg class="ic"><use href="#i-move"/></svg></button>
+        <button class="op-btn op-btn--del op-btn--icon" type="button" title="删除" aria-label="删除"><svg class="ic"><use href="#i-trash"/></svg></button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:22px;margin-top:22px;align-items:flex-start">
+      <div class="zoom-menu">
+        <div class="zoom-menu__head">⋯ 更多操作（同一下拉菜单）</div>
+        <button class="zoom-menu__item zoom-menu__item--icon" type="button" title="改名" aria-label="改名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+        <button class="zoom-menu__item zoom-menu__item--icon" type="button" title="移动到…" aria-label="移动到…"><svg class="ic"><use href="#i-move"/></svg></button>
+        <div class="zoom-menu__sep"></div>
+        <button class="zoom-menu__item zoom-menu__item--del zoom-menu__item--icon" type="button" title="删除" aria-label="删除"><svg class="ic"><use href="#i-trash"/></svg></button>
+      </div>
+      <div style="flex:1">
+        <div class="subhead">字段与操作说明<span>放大态便于核对信息层级</span></div>
+        <div class="rule-list">
+          <li><svg class="ic ic--sm"><use href="#i-info"/></svg><div><b>标题</b>为主信息，单行截断；<b>URL / 域名</b> 用等宽小字降级；<b>文件夹路径</b>已上移到卡片头，行内不再重复。</div></li>
+          <li><svg class="ic ic--sm"><use href="#i-clock"/></svg><div><b>时间</b>统一写「添加于 X 前」，不出现「N 次访问」；卡片顺序按书签树，不按时间倒序。</div></li>
+          <li><svg class="ic ic--sm"><use href="#i-pencil"/></svg><div>三个图标操作：铅笔=改名 / 箭头=移动到… / 垃圾桶=删除，悬停出 title 提示，不再用文字按钮占位置。「移动到…」会打开同一份树形弹层作目标选择器（见 s05）。删除进入两步确认（见 s04）。</div></li>
+        </div>
+      </div>
+    </div>
+    <div class="zoom-note"><svg class="ic ic--sm"><use href="#i-shield"/></svg>
+      <div>静态稿把<b>行级</b> hover 菜单默认展开以便核对；真实界面中行级菜单默认收起，仅在行 hover / 聚焦时浮现。卡片头四枚图标<b>默认常显</b>、贴右上角成组（放大镜｜改名 / 子文件夹 / 删除），与文件夹图标同一水平带，<b>不提供卡片级批量删除</b>。</div></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s04 两步确认条
+     ===================================================================== -->
+<section class="board" id="s04" data-shot="04-two-step-delete">
+  <div class="board-head">
+    <div class="bno">04</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">两步确认条<em>s04 / two-step-delete · 正在统计 … → 确认删除</em></h2>
+      <p class="bhead-notes">删除走<b>两步确认 + 只读统计子树范围</b>：先显示「正在统计…」中间态，再给出「将删除『X』（含 N 个子文件夹 / M 个书签），此操作不可撤销」与「取消 / 确认删除」。danger 色仅出现在此处。</p>
+    </div>
+    <div class="bhead-tag" style="color:var(--danger);background:var(--danger-soft);border-color:var(--danger-border)"><svg class="ic ic--sm"><use href="#i-trash"/></svg> 危险操作</div>
+  </div>
+  <div style="padding:24px 28px 28px;background:var(--bg)">
+    <!-- 阶段 1 -->
+    <div class="phase">
+      <div class="phase-label"><span class="pn">1</span>正在统计…<span>点「删除」后立刻进入，只读扫描子树，扫描完成前不显示确认按钮</span></div>
+      <div class="phase-card">
+        <div class="phase-row">
+          <div class="fav"><svg class="ic"><use href="#i-folder"/></svg></div>
+          <div style="flex:1;min-width:0"><div class="t1">开发</div><div class="t2">书签栏 / 开发 · 文件夹</div></div>
+        </div>
+        <div class="del-bar">
+          <div class="del-text"><span class="spinner"></span>正在统计「开发」下的子文件夹与书签范围…</div>
+          <div class="del-actions">
+            <button class="del-cancel" type="button">取消</button>
+            <button class="del-go" type="button" disabled>确认删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 阶段 2 -->
+    <div class="phase">
+      <div class="phase-label"><span class="pn">2</span>确认删除<span>统计完成后展示只读范围，用户二次确认才真正删除</span></div>
+      <div class="phase-card" style="border-color:var(--danger-border)">
+        <div class="phase-row">
+          <div class="fav" style="background:var(--danger-soft);color:var(--danger)"><svg class="ic"><use href="#i-folder"/></svg></div>
+          <div style="flex:1;min-width:0"><div class="t1">开发</div><div class="t2">书签栏 / 开发 · 文件夹</div></div>
+        </div>
+        <div class="del-bar is-danger">
+          <div class="del-text"><svg class="ic ic--sm"><use href="#i-info"/></svg>
+            <span>将删除「<b>开发</b>」（含 <b>3 个子文件夹 / 12 个书签</b>），此操作不可撤销。</span></div>
+          <div class="del-actions">
+            <button class="del-cancel" type="button">取消</button>
+            <button class="del-go" type="button">确认删除</button>
+          </div>
+        </div>
+        <div class="lock-row"><svg class="ic"><use href="#i-shield"/></svg>范围统计为只读预览，确认前不会改动任何书签或文件夹。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s05 树形弹层
+     ===================================================================== -->
+<section class="board" id="s05" data-shot="05-folder-tree-dialog">
+  <div class="board-head">
+    <div class="bno">05</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">树形弹层（文件夹）<em>s05 / folder-tree-dialog · 兼作「移动到…」目标选择器</em></h2>
+      <p class="bhead-notes">文件夹结构在卡片墙按树顺序平铺，树形弹层是<b>完整结构视图与目标选择器</b>：<b>空文件夹在两处都可见</b>、可新建 / 改名 / 删除 / 移动；内置根节点（书签栏 / 其他书签）<b>不可重命名、移动或删除</b>，操作图标置灰带锁；移动端书签虽由浏览器内置，但扩展可正常修改。新建成功后右下角 toast 提示。</p>
+    </div>
+    <div class="bhead-tag"><svg class="ic ic--sm"><use href="#i-folder"/></svg> 文件夹结构</div>
+  </div>
+  <div class="overlay-demo">
+    <div class="tree-dialog">
+      <div class="tree-head">
+        <div><h3>文件夹</h3><p>管理书签文件夹 · 也可作为「移动到…」的目标选择器</p></div>
+        <button class="mini-btn mini-btn--accent" type="button" style="margin-left:auto"><svg class="ic"><use href="#i-plus"/></svg>新建文件夹</button>
+        <button class="tree-x" type="button"><svg class="ic ic--sm"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="tree-body">
+        <!-- 内置根节点 1（锁定：不可重命名 / 移动 / 删除） -->
+        <div class="tree-node is-sel">
+          <span class="tw"><svg class="ic ic--xs"><use href="#i-chev-d"/></svg></span>
+          <svg class="ic ficon"><use href="#i-folder"/></svg>
+          <span class="name">书签栏</span><span class="tag-lock"><svg class="ic ic--xs"><use href="#i-lock"/></svg>内置 · 锁定</span>
+          <div class="tree-ops">
+            <button class="tree-op is-locked" type="button" title="内置根节点不可重命名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="tree-op" type="button" title="在此新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="tree-op is-locked" type="button" title="内置根节点不可移动"><svg class="ic"><use href="#i-move"/></svg></button>
+            <button class="tree-op is-locked" type="button" title="内置根节点不可删除"><svg class="ic"><use href="#i-lock"/></svg></button>
+          </div>
+        </div>
+        <div class="tree-child">
+          <div class="tree-node">
+            <span class="tw"><svg class="ic ic--xs"><use href="#i-chev-d"/></svg></span>
+            <svg class="ic ficon"><use href="#i-folder"/></svg>
+            <span class="name">开发</span><span class="cnt">12 个书签</span>
+            <div class="tree-ops">
+              <button class="tree-op" type="button"><svg class="ic"><use href="#i-pencil"/></svg></button>
+              <button class="tree-op" type="button"><svg class="ic"><use href="#i-plus"/></svg></button>
+              <button class="tree-op" type="button"><svg class="ic"><use href="#i-move"/></svg></button>
+              <button class="tree-op is-del" type="button"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <div class="tree-child">
+            <div class="tree-node">
+              <span class="tw"></span><svg class="ic ficon"><use href="#i-folder"/></svg>
+              <span class="name">工具</span><span class="cnt">5 个书签</span>
+              <div class="tree-ops">
+                <button class="tree-op" type="button"><svg class="ic"><use href="#i-pencil"/></svg></button>
+                <button class="tree-op" type="button"><svg class="ic"><use href="#i-move"/></svg></button>
+                <button class="tree-op is-del" type="button"><svg class="ic"><use href="#i-trash"/></svg></button>
+              </div>
+            </div>
+            <div class="tree-node">
+              <span class="tw"></span><svg class="ic ficon ficon--empty"><use href="#i-folder"/></svg>
+              <span class="name">归档（空）</span><span class="tag-empty">空文件夹 · 仍可见</span>
+              <div class="tree-ops">
+                <button class="tree-op" type="button"><svg class="ic"><use href="#i-pencil"/></svg></button>
+                <button class="tree-op" type="button"><svg class="ic"><use href="#i-move"/></svg></button>
+                <button class="tree-op is-del" type="button"><svg class="ic"><use href="#i-trash"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="tree-node">
+            <span class="tw"><svg class="ic ic--xs"><use href="#i-chev-r"/></svg></span>
+            <svg class="ic ficon ficon--empty"><use href="#i-folder"/></svg>
+            <span class="name">阅读清单</span><span class="tag-empty">空文件夹 · 仍可见</span>
+            <div class="tree-ops">
+              <button class="tree-op" type="button"><svg class="ic"><use href="#i-pencil"/></svg></button>
+              <button class="tree-op" type="button"><svg class="ic"><use href="#i-move"/></svg></button>
+              <button class="tree-op is-del" type="button"><svg class="ic"><use href="#i-trash"/></svg></button>
+            </div>
+          </div>
+          <div class="tree-node" style="background:var(--accent-soft);border:1px dashed var(--accent-border)">
+            <span class="tw"><svg class="ic ic--xs"><use href="#i-chev-r"/></svg></span>
+            <svg class="ic ficon"><use href="#i-folder"/></svg>
+            <span class="name" style="color:var(--accent)">设计参考</span><span class="cnt" style="color:var(--accent)">刚刚新建</span>
+          </div>
+        </div>
+        <!-- 内置根节点 2（锁定：不可重命名 / 移动 / 删除） -->
+        <div class="tree-node">
+          <span class="tw"><svg class="ic ic--xs"><use href="#i-chev-r"/></svg></span>
+          <svg class="ic ficon"><use href="#i-folder"/></svg>
+          <span class="name">其他书签</span><span class="tag-lock"><svg class="ic ic--xs"><use href="#i-lock"/></svg>内置 · 锁定</span>
+          <div class="tree-ops">
+            <button class="tree-op is-locked" type="button" title="内置根节点不可重命名"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="tree-op" type="button" title="在此新建子文件夹"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="tree-op is-locked" type="button" title="内置根节点不可移动"><svg class="ic"><use href="#i-move"/></svg></button>
+            <button class="tree-op is-locked" type="button" title="内置根节点不可删除"><svg class="ic"><use href="#i-lock"/></svg></button>
+          </div>
+        </div>
+        <!-- 浏览器内置文件夹 3：folderType=mobile，官方允许扩展修改，不能一并锁死 -->
+        <div class="tree-node">
+          <span class="tw"><svg class="ic ic--xs"><use href="#i-chev-r"/></svg></span>
+          <svg class="ic ficon"><use href="#i-folder"/></svg>
+          <span class="name">移动端书签</span><span class="tag-lock"><svg class="ic ic--xs"><use href="#i-check"/></svg>内置 · 可改</span>
+          <div class="tree-ops">
+            <button class="tree-op" type="button"><svg class="ic"><use href="#i-pencil"/></svg></button>
+            <button class="tree-op" type="button"><svg class="ic"><use href="#i-plus"/></svg></button>
+            <button class="tree-op" type="button"><svg class="ic"><use href="#i-move"/></svg></button>
+            <button class="tree-op is-del" type="button"><svg class="ic"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="tree-foot"><svg class="ic ic--sm"><use href="#i-info"/></svg>内置根节点（书签栏 / 其他书签）不可重命名、移动、删除；移动端书签虽内置但扩展可正常修改。空文件夹保持可见。选中某节点即可作为「移动到…」的目标。</div>
+    </div>
+    <div class="toast"><svg class="ic ic--sm"><use href="#i-check"/></svg>已新建文件夹「设计参考」</div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s06 文件夹作用域视图
+     ===================================================================== -->
+<section class="board" id="s06" data-shot="06-folder-scope-view">
+  <div class="board-head">
+    <div class="bno">06</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">文件夹作用域视图<em>s06 / folder-scope-view · 点放大镜或子文件夹 chip 进入</em></h2>
+      <p class="bhead-notes">chip「仅在文件夹 <b>书签栏 / 开发</b> 内搜索书签」+ × +「<b>含所有子文件夹</b> · 按 Esc 或点 × 恢复」+「在新页打开 ↗」；下方是<b>全宽结果列表（不是卡片墙）</b>，候选为该文件夹及所有子文件夹的书签，行内含标题 / URL / <b>完整文件夹路径</b> / 时间，命中词黄底高亮。</p>
+    </div>
+    <div class="bhead-tag"><svg class="ic ic--sm"><use href="#i-list"/></svg> 全宽结果列表</div>
+  </div>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark"></span><h1>网迹</h1></div>
+      <div class="seg">
+        <button type="button"><svg class="ic ic--sm"><use href="#i-history"/></svg>历史</button>
+        <button type="button" class="is-active"><svg class="ic ic--sm"><use href="#i-bookmark"/></svg>书签</button>
+      </div>
+      <div class="search"><svg class="ic ic--sm"><use href="#i-search"/></svg>
+        <input type="text" value="reference" /><span class="kbd">多词 AND</span></div>
+      <div class="topstat">命中 3 个书签</div>
+    </div>
+    <div class="statusbar">
+      <div class="sb-info"><span class="dot"></span>仅在文件夹「书签栏 / 开发」内 · <b>命中 3 / 14 个书签</b> · 含所有子文件夹</div>
+    </div>
+    <div class="pad">
+      <div class="view-flag"><svg class="ic ic--xs"><use href="#i-list"/></svg>下方为全宽结果列表（非卡片墙）</div>
+      <div class="scope-bar">
+        <span class="scope-chip">仅在文件夹 <strong>书签栏 / 开发</strong> 内搜索书签
+          <button class="x" type="button">×</button></span>
+        <span class="scope-tip">含所有子文件夹 · 按 Esc 或点 × 恢复</span>
+        <button class="scope-open" type="button"><svg class="ic"><use href="#i-external"/></svg>在新页打开 ↗</button>
+      </div>
+      <ol class="detail-list">
+        <li class="detail-row">
+          <div class="d-ic">E</div>
+          <div class="detail-main">
+            <span class="d-title">API <mark>Reference</mark> · Authentication</span>
+            <span class="d-url">https://docs.example.com/api/reference/auth</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 文档</span>
+          </div>
+          <span class="d-meta">添加于 昨天</span>
+        </li>
+        <li class="detail-row">
+          <div class="d-ic">E</div>
+          <div class="detail-main">
+            <span class="d-title">组件 <mark>Reference</mark> 手册</span>
+            <span class="d-url">https://example.com/docs/components/reference</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 产品</span>
+          </div>
+          <span class="d-meta">添加于 3 天前</span>
+        </li>
+        <li class="detail-row">
+          <div class="d-ic">E</div>
+          <div class="detail-main">
+            <span class="d-title">配置 <mark>Reference</mark> 速查表</span>
+            <span class="d-url">https://gist.example.com/reference/config</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 工具</span>
+          </div>
+          <span class="d-meta">添加于 1 周前</span>
+        </li>
+      </ol>
+      <p class="footnote">文件夹作用域把该文件夹<b>及其所有子文件夹</b>的书签铺成一张全宽列表，便于逐条核对：标题 / URL / 完整文件夹路径 / 时间一目了然。子文件夹里的书签不会混进父文件夹卡片，只在这里汇总。</p>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s07 搜索状态
+     ===================================================================== -->
+<section class="board" id="s07" data-shot="07-search-states">
+  <div class="board-head">
+    <div class="bno">07</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">搜索状态<em>s07 / search-states · 关键词命中 / 空结果态</em></h2>
+      <p class="bhead-notes">书签搜索：<b>单字即搜、多词 AND、命中高亮（黄底 mark）、零 API 调用</b>（纯本地过滤）；状态行写「命中 N / M 个书签」。空结果给出可操作的引导文案。</p>
+    </div>
+    <div class="bhead-tag"><svg class="ic ic--sm"><use href="#i-search"/></svg> 本地过滤</div>
+  </div>
+  <div class="app">
+    <!-- 命中态 -->
+    <div class="topbar">
+      <div class="brand"><span class="brand-mark"></span><h1>网迹</h1></div>
+      <div class="seg">
+        <button type="button"><svg class="ic ic--sm"><use href="#i-history"/></svg>历史</button>
+        <button type="button" class="is-active"><svg class="ic ic--sm"><use href="#i-bookmark"/></svg>书签</button>
+      </div>
+      <div class="search"><svg class="ic ic--sm"><use href="#i-search"/></svg>
+        <input type="text" value="example api" /><span class="kbd">多词 AND</span></div>
+      <div class="topstat">命中 3 个书签</div>
+    </div>
+    <div class="statusbar">
+      <div class="sb-info"><span class="dot"></span><b>命中 3 / 24 个书签</b> · 关键词「example」「api」需全部命中 · 单字即搜，输入即过滤，零 API 调用</div>
+      <div class="sb-actions">
+        <button class="mini-btn mini-btn--accent" type="button"><svg class="ic"><use href="#i-plus"/></svg>新建书签</button>
+        <button class="mini-btn" type="button"><svg class="ic"><use href="#i-plus"/></svg>新建文件夹</button>
+        <button class="mini-btn mini-btn--ghost" type="button"><svg class="ic"><use href="#i-folder"/></svg>文件夹</button>
+      </div>
+    </div>
+    <div class="pad-tight">
+      <div class="grid">
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">书签栏</div><div class="stat">1 个书签 · 3 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title"><mark>Example</mark> 开发者门户</span><span class="bm-time">添加于 1 周前</span></div>
+              <div class="bm-host"><mark>example</mark>.com</div></li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">文档</div><div class="stat">1 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 文档</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title"><mark>API</mark> 参考 · <mark>Example</mark></span><span class="bm-time">添加于 昨天</span></div>
+              <div class="bm-host">docs.<mark>example</mark>.com</div></li>
+          </ul>
+        </article>
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">工具</div><div class="stat">1 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 工具</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title"><mark>API</mark> 变更周报</span><span class="bm-time">添加于 1 个月前</span></div>
+              <div class="bm-host">news.<mark>example</mark>.org</div></li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout" style="margin-top:16px"><svg class="ic ic--sm"><use href="#i-info"/></svg>
+        <div>命中词用 <b>&lt;mark&gt;（--mark #fff0a8 黄底）</b> 高亮，<b>文件夹名 / 路径、标题、域名、URL 均可命中</b>；<b>多词按 AND</b>，顺序无关。搜索结果<b>仍按文件夹分组</b>，卡片内只列命中的直属书签，不会变回域名卡片。整个过滤在前端完成，<b>不触发任何 API</b>。</div></div>
+    <!-- 空结果态 -->
+    <div style="border-top:1px solid var(--border);background:var(--surface);padding:20px 22px 26px">
+      <div class="subhead">空结果态<span>换个不存在的关键词</span></div>
+      <div class="topbar" style="border-radius:var(--r-md) 0 0 0;border:1px solid var(--border);border-bottom:1px solid var(--border)">
+        <div class="search" style="max-width:none"><svg class="ic ic--sm"><use href="#i-search"/></svg>
+          <input type="text" value="zzz-not-found" /><span class="kbd">多词 AND</span></div>
+        <div class="topstat">命中 0 个书签</div>
+      </div>
+      <div class="statusbar" style="border:1px solid var(--border);border-top:0;border-radius:0 0 var(--r-md) var(--r-md)">
+        <div class="sb-info"><span class="dot"></span><b>命中 0 / 24 个书签</b> · 关键词「zzz-not-found」</div>
+      </div>
+      <div class="empty" style="margin-top:16px">
+        <svg class="ic"><use href="#i-search"/></svg>
+        <h4>没有匹配的书签</h4>
+        <p>试试更短的关键词（单字即搜），或多个词用空格分隔（需全部命中）。<br />也可以清空搜索框恢复全部书签。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s08 详情页（书签详情 · 只读）
+     ===================================================================== -->
+<section class="board" id="s08" data-shot="08-bookmark-detail-readonly">
+  <div class="board-head">
+    <div class="bno">08</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">详情页 · 书签文件夹详情（只读）<em>s08 / bookmark-detail-readonly · detail.html?folder=…</em></h2>
+      <p class="bhead-notes">← 返回卡片墙、<b>文件夹完整路径</b>标题、筛选框、结果列表；标题标注<b>「书签文件夹详情」</b>，列表含该文件夹及所有子文件夹的书签。<b>只读，无任何写入口</b>——没有新建按钮、没有行 hover 菜单、没有删除按钮。</p>
+    </div>
+    <div class="bhead-tag bhead-tag--neutral"><svg class="ic ic--sm"><use href="#i-lock"/></svg> 只读视图</div>
+  </div>
+  <div class="app">
+    <div class="topbar">
+      <button class="detail-back" type="button"><svg class="ic ic--sm" style="margin-right:4px"><use href="#i-arrow-left"/></svg>← 返回卡片墙</button>
+      <div class="detail-heading">
+        <h1>书签栏 / 开发 <span class="tag-readonly" style="margin-left:8px;vertical-align:middle">书签文件夹详情</span></h1>
+        <div class="detail-sub">14 个书签 · 含所有子文件夹 · 按最近添加排序</div>
+      </div>
+      <div class="search" style="margin-left:auto"><svg class="ic ic--sm"><use href="#i-search"/></svg>
+        <input type="text" placeholder="在此文件夹内搜索书签标题、网址或文件夹" /><span class="kbd">多词 AND</span></div>
+    </div>
+    <div class="pad">
+      <p class="detail-note">此页是 <b>「书签栏 / 开发」文件夹及其所有子文件夹的书签详情只读视图</b>：上方输入框仅在该文件夹范围内过滤，支持多词（空格分隔、需全部命中）并高亮命中词；列表来自浏览器书签树，每行给出完整文件夹路径。<b>本页不提供改名、移动、删除、新建等任何写入口</b>，如需管理请返回卡片墙。</p>
+      <ol class="detail-list">
+        <li class="detail-row">
+          <div class="d-ic">D</div>
+          <div class="detail-main">
+            <span class="d-title">API 参考 · Authentication</span>
+            <span class="d-url">https://docs.example.com/api/reference/auth</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 文档</span>
+          </div>
+          <span class="d-meta">添加于 昨天</span>
+        </li>
+        <li class="detail-row">
+          <div class="d-ic">D</div>
+          <div class="detail-main">
+            <span class="d-title">快速开始 Quickstart</span>
+            <span class="d-url">https://docs.example.com/quickstart</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 文档</span>
+          </div>
+          <span class="d-meta">添加于 3 天前</span>
+        </li>
+        <li class="detail-row">
+          <div class="d-ic">D</div>
+          <div class="detail-main">
+            <span class="d-title">Webhooks 指南</span>
+            <span class="d-url">https://docs.example.com/guide/webhooks</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 工具</span>
+          </div>
+          <span class="d-meta">添加于 1 周前</span>
+        </li>
+        <li class="detail-row">
+          <div class="d-ic">D</div>
+          <div class="detail-main">
+            <span class="d-title">SDK 版本说明</span>
+            <span class="d-url">https://docs.example.com/sdk/changelog</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发 / 产品</span>
+          </div>
+          <span class="d-meta">添加于 2 周前</span>
+        </li>
+        <li class="detail-row">
+          <div class="d-ic">E</div>
+          <div class="detail-main">
+            <span class="d-title">示例 · 子域首页</span>
+            <span class="d-url">https://beta.example.com/home</span>
+            <span class="d-crumb"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 开发</span>
+          </div>
+          <span class="d-meta">添加于 3 周前</span>
+        </li>
+      </ol>
+      <div class="diffbar" style="margin-top:16px">
+        <span class="diffchip"><svg class="ic"><use href="#i-arrow-left"/></svg><b>← 返回卡片墙</b></span>
+        <span class="diffchip"><svg class="ic"><use href="#i-search"/></svg><b>文件夹内筛选框</b></span>
+        <span class="diffchip"><svg class="ic"><use href="#i-list"/></svg><b>只读结果列表</b></span>
+        <span class="diffchip diffchip--no"><svg class="ic"><use href="#i-plus"/></svg>新建</span>
+        <span class="diffchip diffchip--no"><svg class="ic"><use href="#i-pencil"/></svg>行 hover 菜单</span>
+        <span class="diffchip diffchip--no"><svg class="ic"><use href="#i-trash"/></svg>删除</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s09 空态与边界
+     ===================================================================== -->
+<section class="board" id="s09" data-shot="09-empty-and-boundaries">
+  <div class="board-head">
+    <div class="bno">09</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">空态与边界<em>s09 / empty-and-boundaries · 书签为空 / 空文件夹 / 特殊协议</em></h2>
+      <p class="bhead-notes">书签为空引导新建；<b>空文件夹显示为空卡片</b>而非隐藏；特殊 URL（<b>chrome:// / file:// / javascript:</b> 书签小工具）<b>留在其所属文件夹卡片内</b>，只展示不打开——协议白名单仅 http/https。§16.13 起不再有独立的「本地 / 其他」域名桶。</p>
+    </div>
+    <div class="bhead-tag bhead-tag--neutral"><svg class="ic ic--sm"><use href="#i-shield"/></svg> 边界规则</div>
+  </div>
+  <div style="padding:24px 28px 28px;background:var(--bg)">
+    <div class="two-col">
+      <!-- 左：书签为空 -->
+      <div>
+        <div class="subhead">书签为空<span>还没有任何书签</span></div>
+        <div class="empty" style="min-height:230px;display:flex;flex-direction:column;justify-content:center">
+          <svg class="ic" style="width:34px;height:34px"><use href="#i-bookmark"/></svg>
+          <h4>还没有书签</h4>
+          <p>点击状态行右侧的「+ 新建书签」添加第一个，<br />或先在「文件夹」里建好分类。</p>
+          <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+            <button class="mini-btn mini-btn--accent" type="button"><svg class="ic"><use href="#i-plus"/></svg>新建书签</button>
+            <button class="mini-btn" type="button"><svg class="ic"><use href="#i-plus"/></svg>新建文件夹</button>
+          </div>
+        </div>
+        <div class="lock-row" style="margin-top:12px"><svg class="ic"><use href="#i-info"/></svg>空态不显示卡片墙、不显示搜索统计，只给最小写入口。</div>
+      </div>
+      <!-- 右：特殊协议留在所属文件夹 -->
+      <div>
+        <div class="subhead">特殊协议留在所属文件夹<span>只展示不打开</span></div>
+        <article class="card">
+          <div class="card-head">
+            <div class="fav fav--folder"><svg class="ic"><use href="#i-folder"/></svg></div>
+            <div class="meta"><div class="domain">系统</div><div class="stat">4 个书签 · 0 个子文件夹</div></div>
+            <div class="card-tools"><button class="tool tool--scope" type="button"><svg class="ic ic--sm"><use href="#i-search"/></svg></button></div>
+          </div>
+          <div class="bm-card-path"><svg class="ic"><use href="#i-folder"/></svg>书签栏 / 系统</div>
+          <ul class="pages">
+            <li><div class="bm-top"><span class="bm-title">扩展程序管理</span><span class="bm-time">只展示</span></div>
+              <div class="bm-host">本地 / 其他 · chrome://extensions/</div></li>
+            <li><div class="bm-top"><span class="bm-title">本地笔记</span><span class="bm-time">只展示</span></div>
+              <div class="bm-host">本地 / 其他 · file:///Users/me/notes.md</div></li>
+            <li><div class="bm-top"><span class="bm-title">页面取词小工具（书签小工具）</span><span class="bm-time">只展示</span></div>
+              <div class="bm-host">本地 / 其他 · javascript:(function(){/* … */})()</div></li>
+            <li><div class="bm-top"><span class="bm-title">浏览器设置</span><span class="bm-time">只展示</span></div>
+              <div class="bm-host">本地 / 其他 · chrome://settings/</div></li>
+          </ul>
+        </article>
+        <div class="lock-row"><svg class="ic"><use href="#i-shield"/></svg>特殊协议书签不单独成桶，仍留在用户整理的文件夹里；所有行不可点击打开，卡片右上仍是放大镜 + 管理图标组。</div>
+      </div>
+    </div>
+    <div class="subhead" style="margin-top:24px">边界规则说明<span>协议白名单与不做的事</span></div>
+    <div class="rule-list" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <li><svg class="ic ic--sm"><use href="#i-shield"/></svg><div><b>协议白名单仅 http / https</b>：<code>chrome://</code>、<code>file://</code>、<code>javascript:</code> 等特殊协议留在所属文件夹卡片内，行内标注「本地 / 其他 · 只展示」，<b>只展示、不打开</b>。</div></li>
+      <li><svg class="ic ic--sm"><use href="#i-folder"/></svg><div><b>空文件夹仍可见</b>：空文件夹显示为空卡片并给「+ 新建子文件夹」入口，树形弹层里同样可见；修订了早期「空文件夹统一收进树弹层」的口径。</div></li>
+      <li><svg class="ic ic--sm"><use href="#i-ban"/></svg><div><b>本版明确不做</b>：跨源「已收藏」标记、拖拽排序、撤销 / 回收站、导入导出、深色主题——不出现在任何界面中。</div></li>
+      <li><svg class="ic ic--sm"><use href="#i-info"/></svg><div><b>数据均为示意</b>：域名用 example.com / docs.example.com / github.com 等占位，不含真实个人数据或账号。</div></li>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     s10 设计说明与 token 表
+     ===================================================================== -->
+<section class="board" id="s10" data-shot="10-spec-and-tokens">
+  <div class="board-head">
+    <div class="bno">10</div>
+    <div class="bhead-txt">
+      <h2 class="bhead-title">设计说明与 token 表<em>s10 / spec-and-tokens · 配色 / 字号 / 间距 / 圆角 / 阴影 / 控件规格</em></h2>
+      <p class="bhead-notes">全部沿用现有 <b>styles.css</b> 浅色 token，不引入新色板；末尾「两 tab 控件差异对照表」是本次改版的<strong>核心契约</strong>。</p>
+    </div>
+    <div class="bhead-tag bhead-tag--neutral"><svg class="ic ic--sm"><use href="#i-grid"/></svg> 设计规格</div>
+  </div>
+  <div style="padding:24px 28px 30px">
+    <div class="doc-grid">
+      <!-- 配色 -->
+      <div class="panel">
+        <h4>配色 / Color（沿用现有 token）</h4>
+        <div class="sw-grid">
+          <div class="sw"><div class="sw__c" style="background:#f5f7fb"></div><div class="sw__m"><span class="sw__n">--bg</span><span class="sw__h">#f5f7fb 画布</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#ffffff"></div><div class="sw__m"><span class="sw__n">--surface</span><span class="sw__h">#ffffff 卡片</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#e3e8f0"></div><div class="sw__m"><span class="sw__n">--border</span><span class="sw__h">#e3e8f0 边框</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#cbd5e5"></div><div class="sw__m"><span class="sw__n">--border-strong</span><span class="sw__h">#cbd5e5 强边框</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#1c2536"></div><div class="sw__m"><span class="sw__n">--text</span><span class="sw__h">#1c2536 主文字</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#6b7688"></div><div class="sw__m"><span class="sw__n">--muted</span><span class="sw__h">#6b7688 次级</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#1d4ed8"></div><div class="sw__m"><span class="sw__n">--accent</span><span class="sw__h">#1d4ed8 主色</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#eaf0fe"></div><div class="sw__m"><span class="sw__n">--accent-soft</span><span class="sw__h">#eaf0fe 浅底</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#fff0a8"></div><div class="sw__m"><span class="sw__n">--mark</span><span class="sw__h">#fff0a8 命中</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#c23b33"></div><div class="sw__m"><span class="sw__n">danger</span><span class="sw__h">#c23b33 仅删除</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#f0f3f9"></div><div class="sw__m"><span class="sw__n">favicon 底</span><span class="sw__h">#f0f3f9</span></div></div>
+          <div class="sw"><div class="sw__c" style="background:#f7f9fc"></div><div class="sw__m"><span class="sw__n">次级面</span><span class="sw__h">#f7f9fc</span></div></div>
+        </div>
+        <p class="note-line">字体：系统无衬线（-apple-system / Segoe UI / Microsoft YaHei / PingFang SC）；地址、代码、计数用系统等宽。danger 仅用于删除确认与危险按钮，其余界面保持中性。</p>
+      </div>
+      <!-- 字号 -->
+      <div class="panel">
+        <h4>字号 / Type scale</h4>
+        <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 14px">
+          <div class="type-row"><span class="type-row__s" style="font-size:17px;font-weight:650">画板状态名 · 17 / 650</span><span class="type-row__t">section title</span></div>
+          <div class="type-row"><span class="type-row__s" style="font-size:16px;font-weight:600">品牌名 / 详情标题 · 16 / 600</span><span class="type-row__t">brand</span></div>
+          <div class="type-row"><span class="type-row__s" style="font-size:14px;font-weight:600">域名 / 文件夹名 · 14 / 600</span><span class="type-row__t">domain / folder</span></div>
+          <div class="type-row"><span class="type-row__s" style="font-size:13px">书签标题 / 按钮 · 13 / 500</span><span class="type-row__t">body / button</span></div>
+          <div class="type-row"><span class="type-row__s" style="font-size:12px;color:var(--muted)">统计 / 状态行 · 12 / 400</span><span class="type-row__t">stat / status</span></div>
+          <div class="type-row"><span class="type-row__s" style="font-size:11px;color:var(--muted)">时间 / 面包屑 · 11 / 400</span><span class="type-row__t">meta / crumb</span></div>
+          <div class="type-row"><span class="type-row__s" style="font:11px var(--font-mono);color:var(--muted)">https://docs.example.com/api · mono 11</span><span class="type-row__t">url / code</span></div>
+        </div>
+        <h4 style="margin-top:20px">间距 / 圆角 / 阴影</h4>
+        <div class="spec-grid">
+          <div class="spec"><b>4px</b><span>间距基准</span></div>
+          <div class="spec"><b>16px</b><span>卡片 padding / gap</span></div>
+          <div class="spec"><b>22px</b><span>顶栏左右留白</span></div>
+          <div class="spec"><b>3 / 4</b><span>普通矩形圆角 xs / 其余</span></div>
+          <div class="spec"><b>4 / 999</b><span>圆角 lg / pill（圆形按钮保持）</span></div>
+          <div class="spec"><b>0 2px 10px</b><span>卡片 hover 阴影</span></div>
+        </div>
+        <p class="note-line">阴影沿用克制的双层柔投影（卡片 hover、画板、树形弹层），不用重投影；分段控件激活态白底 + 微阴影。<b>用户偏好：普通矩形圆角统一收至 3–4px；50% 圆形按钮与 999px 胶囊控件保持不动。</b></p>
+      </div>
+    </div>
+
+    <!-- tab 控件规格 -->
+    <div class="panel" style="margin-top:24px">
+      <h4>tab 控件规格<em style="font-style:normal;font-weight:450;color:var(--muted);font-size:12px">顶栏分段控件 · 切换不跳变</em></h4>
+      <div class="rule-list" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <li><svg class="ic ic--sm"><use href="#i-grid"/></svg><div><b>位置</b>：顶栏同一行，brand 之后、搜索框之前；<b>不额外占纵向空间</b>，两个 tab 高度恒定。</div></li>
+        <li><svg class="ic ic--sm"><use href="#i-history"/></svg><div><b>形态</b>：胶囊分段器，槽底 <code>--bg</code>；激活项白底 + <code>--accent</code> 文字 + 微阴影；两个按钮各带图标「历史 / 书签」。</div></li>
+        <li><svg class="ic ic--sm"><use href="#i-search"/></svg><div><b>搜索框 placeholder 随 tab 变化</b>：历史「搜索域名或页面标题」；书签「搜索书签标题、网址或文件夹」。</div></li>
+        <li><svg class="ic ic--sm"><use href="#i-info"/></svg><div><b>状态行</b>：左侧统计（历史＝域名/访问，书签＝共 N 个文件夹 / M 个书签 · 按书签文件夹排列）；右侧写操作仅书签 tab 有三个按钮。</div></li>
+        <li><svg class="ic ic--sm"><use href="#i-bookmark"/></svg><div><b>§16.13 修订</b>：网格列数 / 卡片尺寸 / 留白保持一致，但历史按域名聚合、<b>书签按文件夹聚合</b>，卡片头多一行完整路径与子文件夹 chips。</div></li>
+        <li><svg class="ic ic--sm"><use href="#i-shield"/></svg><div><b>danger 收敛</b>：仅删除确认条与危险按钮用 #c23b33 系；卡片右上角工具保持中性色。</div></li>
+      </div>
+    </div>
+
+    <!-- 两 tab 差异对照表 -->
+    <div class="panel" style="margin-top:26px">
+      <h4>两 tab 控件差异对照表<em style="font-style:normal;font-weight:450;color:var(--muted);font-size:12px">核心契约 · 实现逐条对齐</em></h4>
+      <table class="diff">
+        <thead><tr>
+          <th style="width:190px">维度</th>
+          <th>历史 tab（对照基准）</th>
+          <th class="h-accent">书签 tab（v1.3.0 新增）</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>卡片右上角工具</td><td>放大镜 + 垃圾桶（域内搜索 / 按域名清除历史）</td><td><span class="yes">放大镜｜改名 / 子文件夹 / 删除四枚图标</span>（默认常显、顶部对齐、1+3 分组），无垃圾桶、无批量删除</td></tr>
+          <tr><td>主视图</td><td>域名卡片墙</td><td><span class="yes">文件夹卡片墙</span>：一张卡片 = 一个文件夹，按书签树顺序平铺（§16.13）</td></tr>
+          <tr><td>文件夹信息</td><td><span class="no">—（无文件夹概念）</span></td><td><b>提升到卡片头</b>：文件夹名 + 完整路径 + 子文件夹 chips；行内第二行改显示域名</td></tr>
+          <tr><td>统计行</td><td>N 页 · N 次 · X 前</td><td><span class="yes">N 个书签 · M 个子文件夹</span>（无「N 次访问」）</td></tr>
+          <tr><td>书签标题显示</td><td>单行省略</td><td><b>标题可读优先</b>：两行内显示全文，行菜单用浮层不占标题宽度，悬停提示给「标题 + 网址」（§16.13.1）</td></tr>
+          <tr><td>排序 / 行内时间</td><td>按最近访问 · 2 小时前</td><td>卡片按书签树顺序 · 行内「添加于 X 前」</td></tr>
+          <tr><td>卡片 &gt;10 条</td><td>在新页查看全部 N 页 ↗</td><td>在新页查看全部 N 个书签 ↗（folder=&lt;id&gt;）</td></tr>
+          <tr><td>底部 / 长尾</td><td>有「加载全部域名」+ 长尾折叠</td><td><span class="yes">均无</span>：不加载全部、不折叠</td></tr>
+          <tr><td>状态行右侧写操作</td><td><span class="no">—（仅统计）</span></td><td>+ 新建书签 / + 新建文件夹 / 文件夹</td></tr>
+          <tr><td>写操作</td><td><span class="no">—（只读列表）</span></td><td>行 hover 菜单（改名 / 移动到… / 删除）+ <b>卡片头右上角工具组</b>（放大镜｜改名 / + 子文件夹 / 删除，默认常显、贴右上、顶部对齐）</td></tr>
+          <tr><td>删除确认</td><td>卡片内两步清除确认</td><td>两步确认 + 只读统计子树范围 + 正在统计…</td></tr>
+          <tr><td>搜索</td><td>域名 / 标题</td><td>单字即搜 · 多词 AND · 命中高亮 · 零 API 调用</td></tr>
+          <tr><td>搜索统计</td><td>—</td><td>命中 N / M 个书签</td></tr>
+          <tr><td>作用域</td><td>域内 · 全宽结果列表</td><td><b>文件夹内</b> · 含所有子文件夹 · chip + 全宽列表（行内显示完整路径）</td></tr>
+          <tr><td>详情页</td><td>域名历史（可说明清除）</td><td><span class="yes">书签文件夹详情 · 只读</span>，标题为文件夹完整路径</td></tr>
+          <tr><td>特殊 URL</td><td>本地 / 其他桶</td><td><b>留在所属文件夹卡片</b>，行内标注「本地 / 其他 · 只展示」，白名单 http/https</td></tr>
+          <tr><td>文件夹结构</td><td><span class="no">—</span></td><td>卡片墙按树顺序平铺（<b>含空文件夹</b>）；树形弹层为完整视图与目标选择器（根锁定 / 移动端可改）</td></tr>
+        </tbody>
+      </table>
+      <div class="boundary"><b>设计边界：</b>本稿为静态视觉提案，所有按钮无行为、数据为示意；不含脚本、不含外链资源。<b>§16.13 修订优先级高于「两个 tab 同形」的早期表述</b>：历史按域名、书签按文件夹。明确不做且未出现在任何界面：跨源「已收藏」标记、拖拽排序、撤销 / 回收站、导入导出、深色主题。</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

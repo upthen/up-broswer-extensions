@@ -5,6 +5,7 @@ import { firstScreen, searchAll, iterateAll, scanHistory, deleteUrls } from './h
 import { normalizeItems, aggregate, classifyCards, matchesDomain, belongsToDomain, LOCAL_BUCKET } from './domain.js';
 import { splitWords, rank, highlight, filterInScope } from './search.js';
 import { renderRows } from './scope-view.js';
+import * as bookmarksPanel from './bookmarks-panel.js';
 
 const $ = (sel) => document.querySelector(sel);
 const qEl = $('#q');
@@ -22,12 +23,17 @@ const scopeNameEl = $('#scopeName');
 const scopeViewEl = $('#scopeView');
 const scopeListEl = $('#scopeList');
 const scopeEmptyEl = $('#scopeEmpty');
+const historyViewEl = $('#historyView');
+const bookmarkViewEl = $('#bookmarkView');
+const tabHistoryBtn = $('#tabHistory');
+const tabBookmarksBtn = $('#tabBookmarks');
 
 const BATCH = 30;
 const REFRESH_GAP = 60_000;
 const INLINE_LIMIT = 10; // 卡内展开上限：超过则在新标签页展示完整列表（SPEC v1.1 §9.8）
 
 const state = {
+  activeTab: 'history', // 'history' | 'bookmarks'；会话内记忆，不落盘（§16.8）
   mode: 'recent', // 'recent' | 'all' | 'search'
   prevMode: 'recent',
   basePages: new Map(), // url -> PageItem（仅内存）
@@ -354,6 +360,8 @@ async function renderScope(g) {
 }
 
 async function render() {
+  // v1.3.0：书签 tab 激活时，历史侧在途异步不得回来覆写共享的 #status。
+  if (state.activeTab === 'bookmarks') return;
   const g = ++state.renderGen;
 
   if (state.scopeKey) {
@@ -615,6 +623,11 @@ let debounceTimer = 0;
 qEl.addEventListener('input', () => {
   const v = qEl.value.trim();
   clearTimeout(debounceTimer);
+  if (state.activeTab === 'bookmarks') {
+    // §16.5：书签侧纯内存硬过滤，单字即搜、120ms、零 API 调用。
+    debounceTimer = setTimeout(() => { bookmarksPanel.onQuery(v); }, 120);
+    return;
+  }
   if (state.scopeKey) {
     // 域内搜索是纯内存过滤：不需要 ≥2 字符门槛，防抖也可以更短。
     state.scopeQuery = v;
@@ -629,7 +642,12 @@ qEl.addEventListener('input', () => {
 });
 
 qEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && state.scopeKey) {
+  if (e.key !== 'Escape') return;
+  if (state.activeTab === 'bookmarks') {
+    if (bookmarksPanel.onEscape()) e.preventDefault();
+    return;
+  }
+  if (state.scopeKey) {
     e.preventDefault();
     exitScope();
   }
@@ -637,10 +655,60 @@ qEl.addEventListener('keydown', (e) => {
 
 loadAllBtn.addEventListener('click', () => { loadAll(); });
 
+// v1.3.0：顶栏分段控件。历史侧原有状态机完全不动，只做视图显隐与搜索词交接。
+function setTabUI(tab) {
+  for (const btn of [tabHistoryBtn, tabBookmarksBtn]) {
+    const on = btn.dataset.tab === tab;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-selected', String(on));
+  }
+}
+
+async function switchTab(tab) {
+  if (tab !== 'history' && tab !== 'bookmarks') return;
+  if (tab === state.activeTab) return;
+  // §16.7-12：两类写操作互斥。历史侧二次确认阶段 deleteBusy 已复位，
+  // 但 deleteView 仍在，必须一并拦住；书签侧由 pendingDelete / busy 覆盖。
+  if (state.deleteBusy || state.deleteView || bookmarksPanel.isBusy()) return;
+
+  if (tab === 'bookmarks') {
+    // 作废历史侧在途异步（搜索竞态 / 域内扫描 / 加载全部），状态保留在内存里。
+    state.generation += 1;
+    state.scopeGen += 1;
+    state.cancelLoad = true;
+    state.scopeLoading = false;
+    state.activeTab = 'bookmarks';
+    setTabUI('bookmarks');
+    historyViewEl.hidden = true;
+    qEl.setAttribute('aria-label', '搜索书签');
+    await bookmarksPanel.activate(qEl.value.trim());
+    return;
+  }
+
+  // 切回历史：先关书签浮层与在途读取，再按当前搜索词重查历史（§16.8）。
+  bookmarksPanel.deactivate();
+  bookmarkViewEl.hidden = true;
+  state.activeTab = 'history';
+  setTabUI('history');
+  historyViewEl.hidden = false;
+  qEl.setAttribute('aria-label', '搜索历史记录');
+  const q = qEl.value.trim();
+  if (q.length >= 2) await runSearch(q);
+  else clearSearch();
+}
+tabHistoryBtn.addEventListener('click', () => { switchTab('history'); });
+tabBookmarksBtn.addEventListener('click', () => { switchTab('bookmarks'); });
+
 document.addEventListener('click', (e) => {
   const target = e.target instanceof Element ? e.target.closest('[data-action]') : null;
   if (!target) return;
   const { action, url, key } = target.dataset;
+  if (state.activeTab === 'bookmarks') {
+    // 书签作用域行由 scope-view.js 生成，沿用 data-action="open-page"；
+    // 其余 bm-* 动作由 bookmarks-panel.js 自己的委托处理，这里一律不接管。
+    if (action === 'open-page') { e.preventDefault(); openPage(url); }
+    return;
+  }
   if (action === 'open-page') {
     e.preventDefault();
     openPage(url);
@@ -679,6 +747,7 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
+  if (state.activeTab === 'bookmarks') { await bookmarksPanel.onVisibility(); return; }
   if (state.mode === 'search' || state.loadingAll || state.deleteBusy || state.scopeKey) return;
   if (Date.now() - state.lastLoadAt < REFRESH_GAP) return;
   // 只做增量补充新访问；删除历史由用户刷新页面（F5）体现。
@@ -708,6 +777,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === 'panel-query') {
     const q = String(msg.q || '').trim();
     qEl.value = q;
+    // §16.8：Alt+H / omnibox 入口作用于当前 tab。
+    if (state.activeTab === 'bookmarks') { bookmarksPanel.onQuery(q); return; }
     if (state.scopeKey) { exitScope(); return; } // omnibox 是全局入口，先撤掉域名限定
     if (q.length >= 2) runSearch(q);
     else clearSearch();
@@ -715,11 +786,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 async function init() {
-  const initialQuery = new URLSearchParams(location.search).get('q') || '';
+  const params = new URLSearchParams(location.search);
+  const initialQuery = params.get('q') || '';
+  // 仍先读一次历史首屏：深链直达书签后，切回历史 tab 也有数据，不必刷新。
   mergePages(await firstScreen());
   state.lastLoadAt = Date.now();
   await render();
-  if (initialQuery.trim().length >= 2) {
+  if (params.get('tab') === 'bookmarks') {
+    // §16.8 深链：activeTab 只存模块内存，关标签即忘。
+    qEl.value = initialQuery;
+    await switchTab('bookmarks');
+  } else if (initialQuery.trim().length >= 2) {
     qEl.value = initialQuery;
     runSearch(initialQuery.trim());
   }

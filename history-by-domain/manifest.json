@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "历史域名卡片墙",
-  "version": "1.2.1",
-  "description": "把浏览历史按域名聚合成卡片，支持全量搜索、按域名限定搜索与清除记录。本地运行，不上传任何数据。",
-  "permissions": ["history", "favicon"],
+  "name": "网迹",
+  "version": "1.3.0",
+  "description": "把浏览历史按域名、书签按文件夹聚合成卡片，支持全量搜索、域内限定搜索、清除历史与书签管理。本地运行，不上传任何数据。",
+  "permissions": ["history", "favicon", "bookmarks"],
   "action": {
-    "default_title": "打开历史域名卡片墙",
+    "default_title": "打开网迹",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -21,7 +21,7 @@
   "commands": {
     "_execute_action": {
       "suggested_key": { "default": "Alt+H" },
-      "description": "打开历史域名卡片墙"
+      "description": "打开网迹"
     }
   },
   "omnibox": { "keyword": "h" }

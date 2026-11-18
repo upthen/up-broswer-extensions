@@ -3,12 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>历史域名卡片墙</title>
+  <title>网迹</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><h1>历史域名卡片墙</h1></div>
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><h1>网迹</h1></div>
+    <div class="tab-switch" role="tablist" aria-label="数据源">
+      <button id="tabHistory" type="button" class="tab-btn is-active" role="tab" aria-selected="true" data-tab="history">历史</button>
+      <button id="tabBookmarks" type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="bookmarks">书签</button>
+    </div>
     <div class="search-wrap">
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索域名或页面标题" aria-label="搜索历史记录" />
       <kbd>Alt+H</kbd>
@@ -17,34 +21,73 @@
   </header>
 
   <main>
-    <div id="scopeBar" class="scope-bar" hidden>
-      <span class="scope-chip">仅在 <strong id="scopeName"></strong> 内搜索
-        <button id="scopeExit" type="button" data-action="scope-exit" aria-label="移除域名限定">×</button>
-      </span>
-      <span class="scope-tip">含所有子域 · 按 Esc 或点 × 恢复全局搜索</span>
-      <button id="scopeOpenDetail" type="button" class="scope-open" data-action="scope-open-detail">在新页打开 ↗</button>
+    <!-- 历史视图：v1.2.1 原有结构，只在外层包一层便于 tab 切换 -->
+    <div id="historyView">
+      <div id="scopeBar" class="scope-bar" hidden>
+        <span class="scope-chip">仅在 <strong id="scopeName"></strong> 内搜索
+          <button id="scopeExit" type="button" data-action="scope-exit" aria-label="移除域名限定">×</button>
+        </span>
+        <span class="scope-tip">含所有子域 · 按 Esc 或点 × 恢复全局搜索</span>
+        <button id="scopeOpenDetail" type="button" class="scope-open" data-action="scope-open-detail">在新页打开 ↗</button>
+      </div>
+
+      <div id="empty" class="empty" hidden></div>
+      <section id="grid" class="grid" aria-label="域名卡片"></section>
+
+      <section id="scopeView" hidden>
+        <div id="scopeEmpty" class="empty" hidden></div>
+        <ol id="scopeList" class="detail-list"></ol>
+      </section>
+
+      <div id="footerActions" class="footer-actions">
+        <button id="loadAll" type="button" class="btn">加载全部域名</button>
+        <span id="loadHint" class="hint"></span>
+      </div>
+
+      <section id="tailSection" class="tail-section" hidden>
+        <button id="tailToggle" type="button" class="tail-toggle" data-action="tail-toggle">其它 0 个域名</button>
+        <div id="tailGrid" class="grid" hidden></div>
+      </section>
+
+      <p class="footnote">数据来自浏览器自身的历史记录（约 90 天）。本插件不保存、不上传任何数据；卡片右上角的清除操作会直接删除浏览器历史，且不可恢复。</p>
     </div>
 
-    <div id="empty" class="empty" hidden></div>
-    <section id="grid" class="grid" aria-label="域名卡片"></section>
+    <!-- 书签视图：v1.3.0 -->
+    <section id="bookmarkView" hidden aria-label="书签">
+      <div class="bm-toolbar">
+        <span id="bmCount" class="bm-count"></span>
+        <div class="bm-actions">
+          <button id="bmNewBookmark" type="button" class="btn" data-action="bm-new-bookmark">+ 新建书签</button>
+          <button id="bmNewFolder" type="button" class="btn" data-action="bm-new-folder">+ 新建文件夹</button>
+          <button id="bmFolders" type="button" class="btn" data-action="bm-folders">文件夹</button>
+        </div>
+      </div>
 
-    <section id="scopeView" hidden>
-      <div id="scopeEmpty" class="empty" hidden></div>
-      <ol id="scopeList" class="detail-list"></ol>
+      <div id="bmScopeBar" class="scope-bar" hidden>
+        <span class="scope-chip">仅在文件夹 <strong id="bmScopeName"></strong> 内搜索书签
+          <button id="bmScopeExit" type="button" data-action="bm-scope-exit" aria-label="移除文件夹限定">×</button>
+        </span>
+        <span class="scope-tip">含所有子文件夹 · 按 Esc 或点 × 恢复</span>
+        <button id="bmScopeOpenDetail" type="button" class="scope-open" data-action="bm-scope-open-detail">在新页打开 ↗</button>
+      </div>
+
+      <div id="bmEmpty" class="empty" hidden></div>
+      <section id="bmGrid" class="grid" aria-label="书签文件夹卡片"></section>
+
+      <section id="bmScopeView" hidden>
+        <div id="bmScopeEmpty" class="empty" hidden></div>
+        <ol id="bmScopeList" class="detail-list"></ol>
+      </section>
+
+      <p class="footnote">书签按你在浏览器里整理的文件夹排列，一张卡片就是一个文件夹，卡片内只放它的直属书签，子文件夹可点进去逐层查看。名单来自浏览器自身的书签库，每次进入本页、写操作成功后或切回标签页时重新读取。删除书签 / 文件夹会直接改动浏览器书签且不可恢复，删除前会给出准确范围与二次确认。</p>
     </section>
-
-    <div id="footerActions" class="footer-actions">
-      <button id="loadAll" type="button" class="btn">加载全部域名</button>
-      <span id="loadHint" class="hint"></span>
-    </div>
-
-    <section id="tailSection" class="tail-section" hidden>
-      <button id="tailToggle" type="button" class="tail-toggle" data-action="tail-toggle">其它 0 个域名</button>
-      <div id="tailGrid" class="grid" hidden></div>
-    </section>
-
-    <p class="footnote">数据来自浏览器自身的历史记录（约 90 天）。本插件不保存、不上传任何数据；卡片右上角的清除操作会直接删除浏览器历史，且不可恢复。</p>
   </main>
+
+  <!-- 全局浮层：文件夹树 / 新建 / 改名 / 移动 / 删除确认 -->
+  <div id="bmOverlay" class="overlay" hidden>
+    <div id="bmDialog" class="dialog" role="dialog" aria-modal="true"></div>
+  </div>
+  <div id="bmToast" class="toast" hidden></div>
 
   <script type="module" src="./app.js"></script>
 </body>
