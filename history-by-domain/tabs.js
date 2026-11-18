@@ -25,6 +25,12 @@ export function normalizeTabs(rawTabs, extensionOrigin) {
     if (!t || !t.url || isSelfTab(t.url, extensionOrigin)) continue;
     const p = normalizeItem({ url: t.url, title: t.title || '' });
     if (!p) continue;
+    // 标签页侧口径：内网单标签主机（如 uih-office）归特殊桶。
+    // 不修改 domain.js——历史侧刻意把它当成独立域名，改动会回归。
+    if (!p.isSpecial && p.host && !p.host.includes('.')) {
+      p.regDomain = LOCAL_BUCKET;
+      p.isSpecial = true;
+    }
     items.push({
       ...p,
       tabId: t.id,

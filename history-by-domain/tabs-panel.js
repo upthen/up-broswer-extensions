@@ -218,7 +218,11 @@ async function reload() {
       statusEl.textContent = '读取标签页失败，请确认已授予标签权限并刷新扩展';
     }
   } finally {
-    if (g === state.loadGen) state.busy = false;
+    if (g === state.loadGen) {
+      state.busy = false;
+      // render() 在 busy=true 时把关闭按钮置灰，读完必须再渲染一次恢复可点。
+      render();
+    }
   }
 }
 

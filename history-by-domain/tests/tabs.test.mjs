@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizeTabs, buildGroups, groupLabel, computeRemoveTargets, confirmText,
+  normalizeTabs, buildGroups, groupLabel, computeRemoveTargets, confirmText, LOCAL_BUCKET,
 } from '../tabs.js';
 
 const ORIGIN = 'chrome-extension://abcdefghijklmnop/';
@@ -187,4 +187,15 @@ test('单独关闭：只关指定标签，固定标签也可关闭', () => {
   const target = computeRemoveTargets(items, { mode: 'single', tabId: 1 });
   assert.deepEqual(target.ids, [1]);
   assert.equal(target.count, 1);
+});
+
+test('内网单标签主机归特殊桶，普通域名不受影响', () => {
+  const items = normalizeTabs([
+    tab(1, 'http://uih-office/'),
+    tab(2, 'https://example.com/'),
+  ], ORIGIN);
+  assert.equal(items[0].regDomain, LOCAL_BUCKET);
+  assert.equal(items[0].isSpecial, true);
+  assert.equal(items[1].regDomain, 'example.com');
+  assert.equal(items[1].isSpecial, false);
 });
