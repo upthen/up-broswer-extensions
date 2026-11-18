@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizeTabs, buildGroups, groupLabel,
+  normalizeTabs, buildGroups, groupLabel, computeRemoveTargets, confirmText,
 } from '../tabs.js';
 
 const ORIGIN = 'chrome-extension://abcdefghijklmnop/';
@@ -110,4 +110,47 @@ test('搜索为纯内存多词 AND，命中标题、网址与域名，大小写�
   assert.deepEqual(buildGroups(items, 'workbuddy docs').flatMap((g) => g.tabs.map((i) => i.tabId)), [1]);
   assert.deepEqual(buildGroups(items, 'GITHUB').flatMap((g) => g.tabs.map((i) => i.tabId)), [1, 2]);
   assert.deepEqual(buildGroups(items, '不存在的词').flatMap((g) => g.tabs.map((i) => i.tabId)), []);
+});
+
+test('组级关闭目标：跨窗口聚合、跳过固定标签、统计子域明细', () => {
+  const items = normalizeTabs([
+    tab(1, 'https://mail.google.com/a', { windowId: 1, index: 0 }),
+    tab(2, 'https://mail.google.com/b', { windowId: 2, index: 0 }),
+    tab(3, 'https://drive.google.com/c', { windowId: 1, index: 1 }),
+    tab(4, 'https://www.google.com/d', { windowId: 1, index: 2, pinned: true }),
+    tab(5, 'https://example.com/keep'),
+  ], ORIGIN);
+  const target = computeRemoveTargets(items, { mode: 'group', key: 'google.com' });
+  assert.deepEqual(target.ids, [1, 2, 3]);
+  assert.equal(target.count, 3);
+  assert.equal(target.skippedPinned, 1);
+  assert.deepEqual(target.subdomains, [
+    { host: 'mail.google.com', count: 2 },
+    { host: 'drive.google.com', count: 1 },
+  ]);
+  assert.equal(target.key, 'google.com');
+});
+
+test('特殊桶不产生整组关闭目标', () => {
+  const items = normalizeTabs([
+    tab(1, 'chrome://settings/'),
+    tab(2, 'file:///C:/a.html'),
+  ], ORIGIN);
+  const target = computeRemoveTargets(items, { mode: 'group', key: '__local__' });
+  assert.deepEqual(target.ids, []);
+  assert.equal(target.count, 0);
+});
+
+test('确认文案含数量、子域与恢复提示，不写「不可撤销」', () => {
+  const items = normalizeTabs([
+    tab(1, 'https://mail.google.com/a'),
+    tab(2, 'https://drive.google.com/b'),
+    tab(3, 'https://www.google.com/c', { pinned: true }),
+  ], ORIGIN);
+  const target = computeRemoveTargets(items, { mode: 'group', key: 'google.com' });
+  const text = confirmText(target, 'group');
+  assert.match(text, /2 个标签页/);
+  assert.match(text, /mail\.google\.com/);
+  assert.match(text, /Ctrl\+Shift\+T/);
+  assert.doesNotMatch(text, /不可撤销/);
 });

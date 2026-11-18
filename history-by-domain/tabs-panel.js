@@ -2,7 +2,7 @@
 // 与 app.js 的历史侧刻意隔离：模块只在切到「标签页」时动态加载，
 // 只在激活且可见时读取，不注册任何 chrome.tabs 事件监听，不写任何存储。
 
-import { normalizeTabs, buildGroups, LOCAL_BUCKET } from './tabs.js';
+import { normalizeTabs, buildGroups, computeRemoveTargets, confirmText, LOCAL_BUCKET } from './tabs.js';
 
 const $ = (s) => document.querySelector(s);
 const viewEl = $('#tabsView');
@@ -22,6 +22,7 @@ const state = {
   query: '',
   expanded: new Set(),
   busy: false,
+  pending: null, // { mode:'group'|'others'|'single', key, tabId, text }
   loadGen: 0,
   renderGen: 0,
   toastTimer: 0,
@@ -58,7 +59,7 @@ function createCard(group) {
       <div class="fav"><img alt="" width="24" height="24" /><span class="fav-fallback"></span></div>
       <div class="meta"><div class="domain"></div><div class="stat"></div></div>
       <div class="card-tools">
-        <button class="tabs-close-all" type="button" data-action="tabs-close-group" hidden>全部关闭</button>
+        <button class="tabs-close-all" type="button" data-action="tabs-close-group">全部关闭</button>
       </div>
     </div>
     <div class="del-bar" hidden>
@@ -90,6 +91,23 @@ function updateCard(el, group, multiWindow) {
   el.querySelector('.domain').textContent = group.label;
   el.querySelector('.stat').textContent = `${group.count} 个标签页`;
   el.classList.toggle('card--special', group.isSpecial);
+
+  const closeAll = el.querySelector('.tabs-close-all');
+  closeAll.hidden = group.isSpecial;
+  closeAll.disabled = state.busy;
+  closeAll.dataset.key = group.key;
+
+  const bar = el.querySelector('.del-bar');
+  const pending = state.pending && state.pending.key === group.key ? state.pending : null;
+  bar.hidden = !pending;
+  bar.classList.toggle('is-danger', !!pending);
+  el.classList.toggle('card--pending', !!pending);
+  if (pending) {
+    bar.querySelector('.del-text').textContent = pending.text;
+    bar.querySelector('.del-cancel').dataset.key = group.key;
+    bar.querySelector('.del-go').dataset.key = group.key;
+    bar.querySelector('.del-go').disabled = state.busy;
+  }
 
   const expanded = state.expanded.has(group.key);
   const more = el.querySelector('.more');
@@ -215,8 +233,64 @@ viewEl.addEventListener('click', (e) => {
     if (state.expanded.has(key)) state.expanded.delete(key);
     else state.expanded.add(key);
     render();
+    return;
+  }
+  if (action === 'tabs-close-group' && key) {
+    e.preventDefault();
+    askClose('group', key);
+    return;
+  }
+  if (action === 'tabs-cancel') {
+    state.pending = null;
+    render();
+    return;
+  }
+  if (action === 'tabs-confirm') {
+    e.preventDefault();
+    confirmClose();
   }
 });
+
+function askClose(mode, key, tabId) {
+  if (state.busy) return;
+  const target = computeRemoveTargets(state.items, { mode, key, tabId });
+  if (!target.count) {
+    toast('这里没有可关闭的标签页');
+    return;
+  }
+  state.pending = { mode, key, tabId, text: confirmText(target, mode) };
+  render();
+}
+
+async function confirmClose() {
+  const pending = state.pending;
+  if (!pending || state.busy) return;
+  state.busy = true;
+  render();
+  try {
+    // 确认时按最新标签列表重算，避免渲染时的陈旧 id 误关别的页面。
+    const fresh = normalizeTabs(await chrome.tabs.query({}), selfOrigin);
+    const target = computeRemoveTargets(fresh, pending);
+    if (!target.count) {
+      toast('这些标签页已经关闭了');
+      state.pending = null;
+      await reload();
+      return;
+    }
+    await chrome.tabs.remove(target.ids);
+    toast(`已关闭 ${target.count} 个标签页 · 可用 Ctrl+Shift+T 恢复`);
+    state.pending = null;
+    await reload();
+  } catch (err) {
+    console.warn('[tabs] remove failed', err);
+    toast(`关闭失败：${String((err && err.message) || err)}`);
+    state.pending = null;
+    await reload();
+  } finally {
+    state.busy = false;
+    render();
+  }
+}
 
 export async function activate(query) {
   state.active = true;
@@ -230,6 +304,7 @@ export function deactivate() {
   state.active = false;
   state.loadGen += 1;
   state.busy = false;
+  state.pending = null; // 切走即作废确认态
   viewEl.hidden = true;
 }
 

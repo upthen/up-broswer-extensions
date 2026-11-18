@@ -81,3 +81,55 @@ export function buildGroups(items, query) {
   });
   return groups;
 }
+
+// 计算一条写路径真正要关闭的标签 id。只读、无副作用，可在确认前反复调用。
+// group / others 模式跳过固定标签；single 模式是用户逐条点的，不做跳过。
+export function computeRemoveTargets(items, options) {
+  const { mode, key, tabId, skipPinned = true } = options || {};
+  const empty = { ids: [], count: 0, key, label: groupLabel(key), subdomains: [], skippedPinned: 0, keep: null };
+
+  if (mode === 'group') {
+    if (!key || key === LOCAL_BUCKET) return empty; // 特殊桶不给整组关闭
+    const base = items.filter((i) => i.regDomain === key);
+    return summarize(base, skipPinned, key, null);
+  }
+  if (mode === 'others') {
+    const keep = items.find((i) => i.tabId === tabId);
+    if (!keep || !keep.regDomain || keep.regDomain === LOCAL_BUCKET) return empty;
+    const base = items.filter((i) => i.regDomain === keep.regDomain && i.tabId !== tabId);
+    return summarize(base, skipPinned, keep.regDomain, keep);
+  }
+  if (mode === 'single') {
+    const one = items.find((i) => i.tabId === tabId);
+    if (!one) return empty;
+    return summarize([one], false, one.regDomain, null);
+  }
+  return empty;
+}
+
+function summarize(base, skipPinned, key, keep) {
+  const targets = skipPinned ? base.filter((i) => !i.pinned) : [...base];
+  const hosts = new Map();
+  for (const i of targets) hosts.set(i.host || groupLabel(i.regDomain), (hosts.get(i.host || groupLabel(i.regDomain)) || 0) + 1);
+  const subdomains = [...hosts].map(([host, count]) => ({ host, count }))
+    .sort((a, b) => (b.count - a.count) || a.host.localeCompare(b.host));
+  return {
+    ids: targets.map((i) => i.tabId),
+    count: targets.length,
+    key,
+    label: groupLabel(key),
+    subdomains,
+    skippedPinned: base.length - targets.length,
+    keep: keep ? { tabId: keep.tabId, title: keep.title || keep.url } : null,
+  };
+}
+
+export function confirmText(target, mode) {
+  const scope = target.subdomains.map((s) => `${s.host} ×${s.count}`).join('、');
+  const skipped = target.skippedPinned ? `已固定 ${target.skippedPinned} 个不会关闭。` : '';
+  const tail = `${skipped}可随时用 Ctrl+Shift+T 恢复。`;
+  if (mode === 'others') {
+    return `保留「${target.keep ? target.keep.title : '当前标签页'}」，关闭 ${target.label} 的其余 ${target.count} 个标签页：${scope}。${tail}`;
+  }
+  return `将关闭 ${target.label} 及其子域的 ${target.count} 个标签页：${scope}。${tail}`;
+}
