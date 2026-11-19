@@ -850,7 +850,14 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   align-items: center;
   gap: 6px;
   padding: 0 2px;
+  border-radius: 4px;
+  transition: background-color 0.12s ease;
 }
+/* 整行高亮必须挂在 li 上，不能挂在 .tab-focus 上——.tab-focus 是 flex: 1 1 auto，
+   只占标题那一段，右侧操作区是它的兄弟节点。挂错地方就会看到「高亮到按钮前就被
+   切断一块」，v1.5.1 之前就是这个形态。 */
+.card--tabs .pages li:hover,
+.card--tabs .pages li:focus-within { background: #f7f9fd; }
 .card--tabs .tab-focus {
   flex: 1 1 auto;
   min-width: 0;
@@ -867,7 +874,7 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   text-align: left;
   cursor: pointer;
 }
-.card--tabs .tab-focus:hover { background: #f7f9fd; color: var(--accent); }
+.card--tabs .tab-focus:hover { color: var(--accent); }
 .card--tabs .tab-focus .p-title {
   display: block;
   white-space: normal;

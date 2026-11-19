@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const src = readFileSync(new URL('../tabs-panel.js', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
 
 test('展开按钮必须把卡片 key 挂到 dataset 上', () => {
   assert.match(src, /more\.dataset\.key\s*=\s*group\.key/);
@@ -21,4 +22,14 @@ test('事件委托必须能从所属卡片兜底取 key', () => {
 
 test('卡片级关闭按钮同样要挂 key', () => {
   assert.match(src, /closeAll\.dataset\.key\s*=\s*group\.key/);
+});
+
+test('行悬浮高亮必须挂在 li 上，不能挂在 .tab-focus 上', () => {
+  // v1.5.2：高亮写在 .tab-focus（flex: 1 1 auto）上时只盖标题区，右侧操作按钮区
+  // 不变色，看起来像被切断一块。这条锁住「整行高亮」的落点。
+  assert.match(css, /\.card--tabs \.pages li:hover/);
+  assert.match(css, /\.card--tabs \.pages li:focus-within/);
+  const focusHover = css.match(/\.card--tabs \.tab-focus:hover\s*\{([^}]*)\}/);
+  assert.ok(focusHover, '应保留 .tab-focus:hover 的文字变色规则');
+  assert.doesNotMatch(focusHover[1], /background/);
 });
