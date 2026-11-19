@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "网迹",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "把浏览历史按域名、书签按文件夹、已打开的标签页按域名聚合成卡片，支持全量搜索、域内限定搜索、清除历史、书签管理与标签页清理。本地运行，不上传任何数据。",
   "permissions": ["history", "favicon", "bookmarks", "tabs"],
   "action": {

@@ -37,7 +37,9 @@ const REFRESH_GAP = 60_000;
 const INLINE_LIMIT = 10; // 卡内展开上限：超过则在新标签页展示完整列表（SPEC v1.1 §9.8）
 
 const state = {
-  activeTab: 'history', // 'history' | 'bookmarks' | 'tabs'；会话内记忆，不落盘（§16.8 / §17）
+  // v1.5.1：标签页是最常用视图，默认落在这里（分段控件也把它排在第一个）。
+  activeTab: 'tabs', // 'history' | 'bookmarks' | 'tabs'；会话内记忆，不落盘（§16.8 / §17）
+  historyReady: false, // 历史首屏是否已读过；默认视图不再是历史，改为切过去时按需读
   mode: 'recent', // 'recent' | 'all' | 'search'
   prevMode: 'recent',
   basePages: new Map(), // url -> PageItem（仅内存）
@@ -443,6 +445,15 @@ function clearSearch() {
   render();
 }
 
+// v1.5.1：默认视图是标签页，启动时不再无条件读 90 天历史——那是这个面板最重的一次读取，
+// 只为了看标签页而付这笔成本没有意义。等真正切到历史（或深链直达历史/书签）时再读一次。
+async function ensureHistoryFirstScreen() {
+  if (state.historyReady) return;
+  mergePages(await firstScreen());
+  state.historyReady = true;
+  state.lastLoadAt = Date.now();
+}
+
 // 域名作用域：进入时先用已加载数据秒出，再后台跑一次全量分段补齐；
 // 之后每次输入都是纯内存过滤，零 history 调用（SPEC v1.2 §6.8）。
 async function enterScope(key) {
@@ -679,9 +690,9 @@ function setTabUI(tab) {
   }
 }
 
-async function switchTab(tab) {
+async function switchTab(tab, { force = false } = {}) {
   if (tab !== 'history' && tab !== 'bookmarks' && tab !== 'tabs') return;
-  if (tab === state.activeTab) return;
+  if (tab === state.activeTab && !force) return;
   // §16.7-12 / §17：写操作互斥扩为三类。历史侧 deleteView 仍在时必须拦住；
   // 书签侧由 pendingDelete / busy 覆盖；标签页侧由自身的 busy / 确认态覆盖。
   if (state.deleteBusy || state.deleteView || bookmarksPanel.isBusy()) return;
@@ -727,6 +738,8 @@ async function switchTab(tab) {
   setTabUI('history');
   historyViewEl.hidden = false;
   qEl.setAttribute('aria-label', '搜索历史记录');
+  if (!state.historyReady) statusEl.textContent = '正在读取浏览器历史…';
+  await ensureHistoryFirstScreen();
   const q = qEl.value.trim();
   if (q.length >= 2) await runSearch(q);
   else clearSearch();
@@ -830,22 +843,19 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 async function init() {
   const params = new URLSearchParams(location.search);
   const initialQuery = params.get('q') || '';
-  const initialTab = params.get('tab');
-  // 仍先读一次历史首屏：深链直达书签后，切回历史 tab 也有数据，不必刷新。
-  // 深链直达标签页时跳过，避免为看标签页而先读历史。
-  if (initialTab !== 'tabs') {
-    mergePages(await firstScreen());
-    state.lastLoadAt = Date.now();
-    await render();
-  }
-  if (initialTab === 'bookmarks' || initialTab === 'tabs') {
-    // §16.8 / §17 深链：activeTab 只存模块内存，关标签即忘。
-    qEl.value = initialQuery;
-    await switchTab(initialTab);
-  } else if (initialQuery.trim().length >= 2) {
-    qEl.value = initialQuery;
-    runSearch(initialQuery.trim());
-  }
+  const requestedTab = params.get('tab');
+  // v1.5.1：标签页是最常用视图，它既是分段控件的第一个，也是默认落点；
+  // ?tab=history / ?tab=bookmarks 仍可直达，其它值一律回落到标签页。
+  const initialTab = requestedTab === 'history' || requestedTab === 'bookmarks' ? requestedTab : 'tabs';
+
+  qEl.value = initialQuery;
+
+  // 深链直达历史/书签时先读首屏：之后切回历史有数据，不必刷新。
+  // 直达标签页则不读——为看标签页先拉 90 天历史没有意义。
+  if (initialTab !== 'tabs') await ensureHistoryFirstScreen();
+
+  // force：state.activeTab 初值已是 'tabs'，不加这个开关，默认落点会被「同 tab」直接挡掉。
+  await switchTab(initialTab, { force: true });
   qEl.focus();
 }
 

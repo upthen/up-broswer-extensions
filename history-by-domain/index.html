@@ -10,20 +10,21 @@
   <header class="topbar">
     <div class="brand"><span class="brand-mark" aria-hidden="true"></span><h1>网迹</h1></div>
     <div class="tab-switch" role="tablist" aria-label="数据源">
-      <button id="tabHistory" type="button" class="tab-btn is-active" role="tab" aria-selected="true" data-tab="history">历史</button>
+      <button id="tabTabs" type="button" class="tab-btn is-active" role="tab" aria-selected="true" data-tab="tabs">标签页</button>
       <button id="tabBookmarks" type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="bookmarks">书签</button>
-      <button id="tabTabs" type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="tabs">标签页</button>
+      <button id="tabHistory" type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="history">历史</button>
     </div>
     <div class="search-wrap">
-      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索域名或页面标题" aria-label="搜索历史记录" />
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="搜索标签页标题、网址或域名" aria-label="搜索标签页" />
       <kbd>Alt+H</kbd>
     </div>
-    <div id="status" class="status">正在读取浏览器历史…</div>
+    <div id="status" class="status">正在读取标签页…</div>
   </header>
 
   <main>
-    <!-- 历史视图：v1.2.1 原有结构，只在外层包一层便于 tab 切换 -->
-    <div id="historyView">
+    <!-- 历史视图：v1.2.1 原有结构，只在外层包一层便于 tab 切换。
+         v1.5.1 起默认视图是标签页，历史首屏等真正切过去时再读。 -->
+    <div id="historyView" hidden>
       <div id="scopeBar" class="scope-bar" hidden>
         <span class="scope-chip">仅在 <strong id="scopeName"></strong> 内搜索
           <button id="scopeExit" type="button" data-action="scope-exit" aria-label="移除域名限定">×</button>
@@ -83,8 +84,9 @@
       <p class="footnote">书签按你在浏览器里整理的文件夹排列，一张卡片就是一个文件夹，卡片内只放它的直属书签，子文件夹可点进去逐层查看。名单来自浏览器自身的书签库，每次进入本页、写操作成功后或切回标签页时重新读取。删除书签 / 文件夹会直接改动浏览器书签且不可恢复，删除前会给出准确范围与二次确认。</p>
     </section>
 
-    <!-- 标签页视图：v1.4.0，按需加载，只读标签元数据，不落库、不常驻监听 -->
-    <section id="tabsView" hidden aria-label="标签页">
+    <!-- 标签页视图：v1.4.0，按需加载，只读标签元数据，不落库、不常驻监听。
+         v1.5.1 起是默认视图（最常用），与分段控件的第一个位置一致。 -->
+    <section id="tabsView" aria-label="标签页">
       <div class="tabs-toolbar">
         <span id="tabsCount" class="bm-count"></span>
         <div class="tabs-actions">
