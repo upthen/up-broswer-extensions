@@ -2,7 +2,7 @@
 // 与 app.js 的历史侧刻意隔离：模块只在切到「标签页」时动态加载，
 // 只在激活且可见时读取，不注册任何 chrome.tabs 事件监听，不写任何存储。
 
-import { normalizeTabs, buildGroups, computeRemoveTargets, confirmText, pickActionKey, CLOSE_MODE } from './tabs.js';
+import { normalizeTabs, buildGroups, computeRemoveTargets, closeToast, pickActionKey, CLOSE_MODE } from './tabs.js';
 
 const $ = (s) => document.querySelector(s);
 const viewEl = $('#tabsView');
@@ -22,7 +22,6 @@ const state = {
   query: '',
   expanded: new Set(),
   busy: false,
-  pending: null, // { mode:'group'|'others'|'single', key, tabId, text }
   loadGen: 0,
 };
 
@@ -61,13 +60,6 @@ function createCard(group) {
       <div class="meta"><div class="domain"></div><div class="stat"></div></div>
       <div class="card-tools">
         <button class="bm-op bm-op--icon bm-op--del tabs-close-all" type="button" data-action="tabs-close-group" title="关闭该站点全部标签页" aria-label="关闭该站点全部标签页">${ICON.closeAll}</button>
-      </div>
-    </div>
-    <div class="del-bar" hidden>
-      <div class="del-text"></div>
-      <div class="del-actions">
-        <button class="del-cancel" type="button" data-action="tabs-cancel">取消</button>
-        <button class="del-go" type="button" data-action="tabs-confirm">关闭标签页</button>
       </div>
     </div>
     <ul class="pages"></ul>
@@ -127,18 +119,6 @@ function updateCard(el, group, multiWindow) {
   closeAll.hidden = group.isSpecial;
   closeAll.disabled = state.busy;
   closeAll.dataset.key = group.key;
-
-  const bar = el.querySelector('.del-bar');
-  const pending = state.pending && state.pending.key === group.key ? state.pending : null;
-  bar.hidden = !pending;
-  bar.classList.toggle('is-danger', !!pending);
-  el.classList.toggle('card--pending', !!pending);
-  if (pending) {
-    bar.querySelector('.del-text').textContent = pending.text;
-    bar.querySelector('.del-cancel').dataset.key = group.key;
-    bar.querySelector('.del-go').dataset.key = group.key;
-    bar.querySelector('.del-go').disabled = state.busy;
-  }
 
   const expanded = state.expanded.has(group.key);
   const more = el.querySelector('.more');
@@ -281,13 +261,12 @@ viewEl.addEventListener('click', (e) => {
   }
   if (action === 'tabs-close-group' && key) {
     e.preventDefault();
-    askClose(CLOSE_MODE.GROUP, key);
+    closeGroup(key);
     return;
   }
   if (action === 'tab-close-others') {
     e.preventDefault();
-    const item = state.items.find((i) => i.tabId === Number(id));
-    if (item) askClose(CLOSE_MODE.OTHERS, item.regDomain, item.tabId);
+    closeOthers(Number(id));
     return;
   }
   if (action === 'tab-close-one') {
@@ -295,29 +274,9 @@ viewEl.addEventListener('click', (e) => {
     closeSingle(Number(id));
     return;
   }
-  if (action === 'tabs-cancel') {
-    state.pending = null;
-    render();
-    return;
-  }
-  if (action === 'tabs-confirm') {
-    e.preventDefault();
-    confirmClose();
-  }
 });
 
-function askClose(mode, key, tabId) {
-  if (state.busy) return;
-  const target = computeRemoveTargets(state.items, { mode, key, tabId });
-  if (!target.count) {
-    toast('这里没有可关闭的标签页');
-    return;
-  }
-  state.pending = { mode, key, tabId, text: confirmText(target, mode) };
-  render();
-}
-
-// 三条写路径共用的执行链路：确认后按最新标签列表重算目标，关闭 → 重读 → toast。
+// 三条写路径共用同一条执行链路：按最新标签列表重算目标，关闭 → 重读 → toast。
 // 先 query 再算 id，避免渲染时的陈旧 id 误关别的页面。
 async function applyClose(selectTarget, emptyText) {
   if (state.busy) return;
@@ -328,18 +287,15 @@ async function applyClose(selectTarget, emptyText) {
     const target = selectTarget(fresh);
     if (!target.count) {
       toast(emptyText);
-      state.pending = null;
       await reload();
       return;
     }
     await chrome.tabs.remove(target.ids);
-    toast(`已关闭 ${target.count} 个标签页 · 可用 Ctrl+Shift+T 恢复`);
-    state.pending = null;
+    toast(closeToast(target));
     await reload();
   } catch (err) {
     console.warn('[tabs] close failed', err);
     toast(`关闭失败：${String((err && err.message) || err)}`);
-    state.pending = null;
     await reload();
   } finally {
     state.busy = false;
@@ -347,20 +303,28 @@ async function applyClose(selectTarget, emptyText) {
   }
 }
 
-// 单条关闭可逆，一次点击即执行，不进入两步确认。
+// v1.5.3 起三条路径都是**一次点击即执行**：批量关闭再套一层确认条，
+// 每次都要点两下才生效，日常高频操作里比误关更烦。误关可逆靠 toast 提示的
+// Ctrl+Shift+T，且关闭前会用最新标签列表重算，绝不会按陈旧 id 关错页面。
+function closeGroup(key) {
+  return applyClose(
+    (fresh) => computeRemoveTargets(fresh, { mode: CLOSE_MODE.GROUP, key }),
+    '这里没有可关闭的标签页',
+  );
+}
+
+function closeOthers(tabId) {
+  return applyClose(
+    (fresh) => computeRemoveTargets(fresh, { mode: CLOSE_MODE.OTHERS, tabId }),
+    '这些标签页已经关闭了',
+  );
+}
+
+// 单条关闭可逆，一次点击即执行。
 function closeSingle(tabId) {
   return applyClose(
     (fresh) => computeRemoveTargets(fresh, { mode: CLOSE_MODE.SINGLE, tabId }),
     '该标签页已经关闭了',
-  );
-}
-
-function confirmClose() {
-  const pending = state.pending;
-  if (!pending) return;
-  return applyClose(
-    (fresh) => computeRemoveTargets(fresh, pending),
-    '这些标签页已经关闭了',
   );
 }
 
@@ -376,7 +340,6 @@ export function deactivate() {
   state.active = false;
   state.loadGen += 1;
   state.busy = false;
-  state.pending = null; // 切走即作废确认态
   viewEl.hidden = true;
 }
 
@@ -391,6 +354,6 @@ export function onQuery(query) {
 }
 
 export function isBusy() {
-  // 与书签侧一致：确认态也算忙碌，禁止在等待二次确认时切走 tab。
-  return state.busy || !!state.pending;
+  // 写操作在途时禁止切走 tab（关标签会连带重读面板，切走会读到半途状态）。
+  return state.busy;
 }

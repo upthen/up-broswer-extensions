@@ -156,15 +156,9 @@ function summarize(base, skipPinned, key, keep) {
   };
 }
 
-export function confirmText(target, mode) {
-  // 卡内只剩一个主机名，明细不再需要；跨窗口时补窗口范围，让爆炸半径看得见。
-  const winText = target.windows && target.windows.length > 1
-    ? `（${target.windows.map((w) => `窗口 ${w.windowId} ×${w.count}`).join('、')}）`
-    : '';
-  const skipped = target.skippedPinned ? `已固定 ${target.skippedPinned} 个不会关闭。` : '';
-  const tail = `${skipped}可随时用 Ctrl+Shift+T 恢复。`;
-  if (mode === 'others') {
-    return `保留「${target.keep ? target.keep.title : '当前标签页'}」，关闭 ${target.label} 的其余 ${target.count} 个标签页${winText}。${tail}`;
-  }
-  return `将关闭 ${target.label} 的 ${target.count} 个标签页${winText}。${tail}`;
+// v1.5.3 起关闭不再走两步确认，改成「一次点击 + 事后 toast 交代爆炸半径」。
+// 所以这句话必须同时说清：关了几个、有没有因为固定而保留、怎么撤回。
+export function closeToast(target) {
+  const skipped = target.skippedPinned ? `，已固定的 ${target.skippedPinned} 个保留` : '';
+  return `已关闭 ${target.count} 个标签页${skipped} · 可用 Ctrl+Shift+T 恢复`;
 }

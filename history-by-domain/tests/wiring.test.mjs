@@ -24,6 +24,16 @@ test('卡片级关闭按钮同样要挂 key', () => {
   assert.match(src, /closeAll\.dataset\.key\s*=\s*group\.key/);
 });
 
+test('标签页关闭走一次点击即执行，不再渲染第二步确认条', () => {
+  // v1.5.3：批量关闭也要点两下才生效，日常高频操作里比误关更烦。
+  // 三条写路径都必须直接落到 applyClose；确认条的 DOM 与处理器一并删掉。
+  assert.doesNotMatch(src, /data-action="tabs-confirm"/);
+  assert.doesNotMatch(src, /data-action="tabs-cancel"/);
+  assert.doesNotMatch(src, /class="del-bar"/);
+  assert.match(src, /function closeGroup\(key\)[\s\S]{0,240}applyClose\(/);
+  assert.match(src, /function closeOthers\(tabId\)[\s\S]{0,240}applyClose\(/);
+});
+
 test('行悬浮高亮必须挂在 li 上，不能挂在 .tab-focus 上', () => {
   // v1.5.2：高亮写在 .tab-focus（flex: 1 1 auto）上时只盖标题区，右侧操作按钮区
   // 不变色，看起来像被切断一块。这条锁住「整行高亮」的落点。

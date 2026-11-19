@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  normalizeTabs, buildGroups, groupLabel, computeRemoveTargets, confirmText,
+  normalizeTabs, buildGroups, groupLabel, computeRemoveTargets, closeToast,
   groupKeyOf, pickActionKey, LOCAL_BUCKET,
 } from '../tabs.js';
 
@@ -156,7 +156,9 @@ test('特殊桶不产生整组关闭目标', () => {
   assert.equal(target.count, 0);
 });
 
-test('确认文案含数量与恢复提示，不再声称「及其子域」', () => {
+// v1.5.3：关闭不再有两步确认，事后 toast 是唯一的「爆炸半径」交代处，
+// 所以数量、固定页保留、撤回方式三件事必须都在。
+test('关闭后 toast 含数量与恢复提示，不声称「及其子域」也不说「不可撤销」', () => {
   const items = normalizeTabs([
     tab(1, 'https://mail.google.com/a'),
     tab(2, 'https://mail.google.com/b'),
@@ -164,25 +166,19 @@ test('确认文案含数量与恢复提示，不再声称「及其子域」', ()
     tab(4, 'https://drive.google.com/d'),
   ], ORIGIN);
   const target = computeRemoveTargets(items, { mode: 'group', key: 'mail.google.com' });
-  const text = confirmText(target, 'group');
-  assert.match(text, /2 个标签页/);
-  assert.match(text, /mail\.google\.com/);
-  assert.doesNotMatch(text, /及其子域/);
-  assert.doesNotMatch(text, /drive\.google\.com/);
+  const text = closeToast(target);
+  assert.match(text, /已关闭 2 个标签页/);
+  assert.match(text, /已固定的 1 个保留/);
   assert.match(text, /Ctrl\+Shift\+T/);
+  assert.doesNotMatch(text, /及其子域/);
   assert.doesNotMatch(text, /不可撤销/);
+  assert.doesNotMatch(text, /drive\.google\.com/);
 });
 
-test('跨窗口的确认文案带窗口范围，单窗口不带', () => {
-  const items = normalizeTabs([
-    tab(1, 'https://example.com/a', { windowId: 1, index: 0 }),
-    tab(2, 'https://example.com/b', { windowId: 2, index: 0 }),
-  ], ORIGIN);
-  const target = computeRemoveTargets(items, { mode: 'group', key: 'example.com' });
-  assert.match(confirmText(target, 'group'), /窗口 1 ×1、窗口 2 ×1/);
-
-  const single = computeRemoveTargets(items.slice(0, 1), { mode: 'group', key: 'example.com' });
-  assert.doesNotMatch(confirmText(single, 'group'), /窗口/);
+test('没有跳过固定页时 toast 不出现「已固定」', () => {
+  const items = normalizeTabs([tab(1, 'https://example.com/a'), tab(2, 'https://example.com/b')], ORIGIN);
+  const text = closeToast(computeRemoveTargets(items, { mode: 'group', key: 'example.com' }));
+  assert.equal(text, '已关闭 2 个标签页 · 可用 Ctrl+Shift+T 恢复');
 });
 
 test('关闭其他：保留本行，只关同一主机名的其余标签并跳过固定页', () => {
@@ -196,8 +192,6 @@ test('关闭其他：保留本行，只关同一主机名的其余标签并跳�
   assert.deepEqual(target.ids, [2]);
   assert.equal(target.count, 1);
   assert.equal(target.keep.title, '要保留的页面');
-  assert.match(confirmText(target, 'others'), /保留「要保留的页面」/);
-  assert.match(confirmText(target, 'others'), /其余 1 个标签页/);
 });
 
 test('特殊桶的「关闭其他」没有目标', () => {
