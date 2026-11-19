@@ -1,8 +1,8 @@
-// 标签页 tab 视图层（SPEC v1.4.0）：只读标签元数据、按域名成卡、点击聚焦。
+// 标签页 tab 视图层（SPEC v1.4.0，v1.5.0 起按主机名成卡）：只读标签元数据、按站点成卡、点击聚焦。
 // 与 app.js 的历史侧刻意隔离：模块只在切到「标签页」时动态加载，
 // 只在激活且可见时读取，不注册任何 chrome.tabs 事件监听，不写任何存储。
 
-import { normalizeTabs, buildGroups, computeRemoveTargets, confirmText, CLOSE_MODE } from './tabs.js';
+import { normalizeTabs, buildGroups, computeRemoveTargets, confirmText, pickActionKey, CLOSE_MODE } from './tabs.js';
 
 const $ = (s) => document.querySelector(s);
 const viewEl = $('#tabsView');
@@ -46,6 +46,9 @@ function faviconURL(url) {
 const ICON = {
   close: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.6a6.4 6.4 0 1 0 0 12.8A6.4 6.4 0 0 0 8 1.6zm2.5 8.1-.9.9L8 8.9l-1.6 1.7-.9-.9L7.1 8 5.5 6.4l.9-.9L8 7.1l1.6-1.6.9.9L8.9 8l1.6 1.7z" fill="currentColor"/></svg>',
   others: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 3h1.6v10H2V3zm3.2 3h8.8v1.4H5.2V6zm0 3.6h8.8v1.4H5.2V9.6z" fill="currentColor"/></svg>',
+  // 组级关闭：粗 ×（无圆圈），与行内的圈 × 区分开
+  closeAll: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.1 2.05 8 6.95l4.9-4.9 1.05 1.05L9.05 8l4.9 4.9-1.05 1.05L8 9.05l-4.9 4.9L2.05 12.9 6.95 8 2.05 3.1z" fill="currentColor"/></svg>',
+  chevron: '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 10.9 3.5 6.4l1.1-1.1L8 8.7l3.4-3.4 1.1 1.1z" fill="currentColor"/></svg>',
 };
 
 function createCard(group) {
@@ -57,7 +60,7 @@ function createCard(group) {
       <div class="fav"><img alt="" width="24" height="24" hidden /><span class="fav-fallback"></span></div>
       <div class="meta"><div class="domain"></div><div class="stat"></div></div>
       <div class="card-tools">
-        <button class="tabs-close-all" type="button" data-action="tabs-close-group">全部关闭</button>
+        <button class="bm-op bm-op--icon bm-op--del tabs-close-all" type="button" data-action="tabs-close-group" title="关闭该站点全部标签页" aria-label="关闭该站点全部标签页">${ICON.closeAll}</button>
       </div>
     </div>
     <div class="del-bar" hidden>
@@ -68,7 +71,7 @@ function createCard(group) {
       </div>
     </div>
     <ul class="pages"></ul>
-    <button class="more" type="button" data-action="tabs-expand" hidden></button>
+    <button class="more" type="button" data-action="tabs-expand" aria-expanded="false" hidden>${ICON.chevron}<span class="more-label"></span></button>
   `;
   const fallback = el.querySelector('.fav-fallback');
   fallback.textContent = (group.label || '?').charAt(0).toUpperCase();
@@ -77,10 +80,23 @@ function createCard(group) {
   return el;
 }
 
-function rowMeta(item, group, multiWindow) {
+// 卡片标题已经是完整主机名，行内再重复一遍纯属噪音；改用路径/协议区分同站的多个页面。
+function trailOf(item) {
+  if (item.isSpecial) {
+    try {
+      const u = new URL(item.url);
+      return `${u.protocol.replace(':', '')}${u.hostname ? `://${u.hostname}` : ''}`;
+    } catch {
+      return '';
+    }
+  }
+  return item.path && item.path !== '/' ? item.path : '';
+}
+
+function rowMeta(item, multiWindow) {
   const bits = [];
-  if (item.isSpecial) bits.push('本地 / 其他');
-  else bits.push(item.host || item.regDomain);
+  const trail = trailOf(item);
+  if (trail) bits.push(trail);
   if (multiWindow) bits.push(`窗口 ${item.windowId}`);
   if (item.pinned) bits.push('已固定');
   if (item.isDuplicate) bits.push('重复');
@@ -127,7 +143,11 @@ function updateCard(el, group, multiWindow) {
   const expanded = state.expanded.has(group.key);
   const more = el.querySelector('.more');
   more.hidden = group.count <= PREVIEW;
-  more.textContent = expanded ? '收起' : `展开全部 ${group.count} 个`;
+  // 事件委托靠 dataset.key 找卡片；漏挂这一行会让「展开全部」点了完全没反应。
+  more.dataset.key = group.key;
+  more.classList.toggle('is-open', expanded);
+  more.setAttribute('aria-expanded', String(expanded));
+  more.querySelector('.more-label').textContent = expanded ? '收起' : `展开全部 ${group.count} 个`;
 
   const list = el.querySelector('.pages');
   const shown = expanded ? group.tabs : group.tabs.slice(0, PREVIEW);
@@ -149,7 +169,7 @@ function updateCard(el, group, multiWindow) {
     title.textContent = item.title || item.url;
     const meta = document.createElement('span');
     meta.className = 'tab-meta';
-    meta.textContent = rowMeta(item, group, multiWindow);
+    meta.textContent = rowMeta(item, multiWindow);
     focus.append(title, meta);
 
     const ops = document.createElement('span');
@@ -197,11 +217,11 @@ function render() {
       : '当前没有可展示的标签页';
   }
   const total = state.items.length;
-  const domains = groups.filter((group) => !group.isSpecial).length;
-  countEl.textContent = `${total} 个标签页 · ${domains} 个域名`;
+  const sites = groups.filter((group) => !group.isSpecial).length;
+  countEl.textContent = `${total} 个标签页 · ${sites} 个站点`;
   statusEl.textContent = state.query
     ? `命中 ${total ? groups.reduce((n, group) => n + group.count, 0) : 0} / ${total} 个标签页 · 纯内存过滤`
-    : `共 ${total} 个标签页 · ${domains} 个域名 · 数据来自浏览器当前打开的页面`;
+    : `共 ${total} 个标签页 · ${sites} 个站点 · 数据来自浏览器当前打开的页面`;
 }
 
 async function reload() {
@@ -241,7 +261,9 @@ async function focusTab(id) {
 viewEl.addEventListener('click', (e) => {
   const target = e.target instanceof Element ? e.target.closest('[data-action]') : null;
   if (!target || !state.active) return;
-  const { action, id, key } = target.dataset;
+  const { action, id } = target.dataset;
+  // 按钮自己没挂 key 时从所属卡片兜底，避免再出现「点了没反应」。
+  const key = pickActionKey(target.dataset.key, target.closest('.card')?.dataset.key);
   if (action === 'tabs-refresh') {
     reload();
     return;

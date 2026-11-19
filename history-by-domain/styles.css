@@ -821,19 +821,29 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 .tabs-actions { display: flex; gap: 8px; margin-left: auto; }
 .tabs-actions .btn { padding: 6px 12px; font-size: 12px; }
 
-.card--tabs .card-tools { align-self: flex-start; margin-top: 4px; }
-.tabs-close-all {
-  padding: 5px 10px;
-  border: 1px solid #e0a9a2;
-  border-radius: 3px;
-  background: #fff;
-  color: #a8514a;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
+/* v1.5.0：卡头与行内操作默认隐形，鼠标悬浮卡片/行（或键盘聚焦）才出现。
+   常显会让卡片显得拥挤，也更容易误点；隐形时必须同时关掉命中区域。 */
+.card--tabs .card-tools {
+  align-self: flex-start;
+  margin-top: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
 }
-.tabs-close-all:hover:not(:disabled) { background: #fdecea; border-color: #c0392b; color: #b93a2b; }
-.tabs-close-all:disabled { opacity: 0.5; cursor: default; }
+.card--tabs:hover .card-tools,
+.card--tabs:focus-within .card-tools { opacity: 1; pointer-events: auto; }
+.card--tabs .card-tools .bm-op--icon {
+  color: #b47d76;
+  border-color: transparent;
+  background: transparent;
+}
+.card--tabs .card-tools .bm-op--icon:hover:not(:disabled) {
+  color: #b93a2b;
+  border-color: #f3c2bd;
+  background: #fdecea;
+}
+.card--tabs .card-tools .bm-op--icon:disabled { opacity: 0.3; }
+.tabs-refresh { width: 28px; height: 28px; }
 
 .card--tabs .pages li {
   display: flex;
@@ -879,5 +889,21 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
   flex: 0 0 auto;
   display: flex;
   gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
 }
+.card--tabs .tab-row:hover .tab-ops,
+.card--tabs .tab-row:focus-within .tab-ops { opacity: 1; pointer-events: auto; }
 .card--tabs .tab-op { width: 24px; height: 24px; padding: 4px; }
+
+/* 「展开全部」= 文字 + 折叠箭头，展开后箭头翻转 */
+.card--tabs .more { display: inline-flex; align-items: center; gap: 4px; }
+.card--tabs .more svg { transition: transform 0.12s ease; }
+.card--tabs .more.is-open svg { transform: rotate(180deg); }
+
+/* 触摸/无 hover 设备上隐形按钮等于不可用，必须常显 */
+@media (hover: none) {
+  .card--tabs .card-tools,
+  .card--tabs .tab-ops { opacity: 1; pointer-events: auto; }
+}
