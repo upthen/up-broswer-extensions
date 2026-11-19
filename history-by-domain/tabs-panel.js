@@ -14,13 +14,11 @@ const qEl = $('#q');
 const toastEl = $('#tabsToast');
 
 const selfOrigin = chrome.runtime.getURL('');
-const PREVIEW = 3;
 
 const state = {
   active: false,
   items: [],
   query: '',
-  expanded: new Set(),
   busy: false,
   loadGen: 0,
 };
@@ -47,7 +45,6 @@ const ICON = {
   others: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M2 3h1.6v10H2V3zm3.2 3h8.8v1.4H5.2V6zm0 3.6h8.8v1.4H5.2V9.6z" fill="currentColor"/></svg>',
   // 组级关闭：粗 ×（无圆圈），与行内的圈 × 区分开
   closeAll: '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.1 2.05 8 6.95l4.9-4.9 1.05 1.05L9.05 8l4.9 4.9-1.05 1.05L8 9.05l-4.9 4.9L2.05 12.9 6.95 8 2.05 3.1z" fill="currentColor"/></svg>',
-  chevron: '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 10.9 3.5 6.4l1.1-1.1L8 8.7l3.4-3.4 1.1 1.1z" fill="currentColor"/></svg>',
 };
 
 function createCard(group) {
@@ -63,7 +60,6 @@ function createCard(group) {
       </div>
     </div>
     <ul class="pages"></ul>
-    <button class="more" type="button" data-action="tabs-expand" aria-expanded="false" hidden>${ICON.chevron}<span class="more-label"></span></button>
   `;
   const fallback = el.querySelector('.fav-fallback');
   fallback.textContent = (group.label || '?').charAt(0).toUpperCase();
@@ -120,19 +116,10 @@ function updateCard(el, group, multiWindow) {
   closeAll.disabled = state.busy;
   closeAll.dataset.key = group.key;
 
-  const expanded = state.expanded.has(group.key);
-  const more = el.querySelector('.more');
-  more.hidden = group.count <= PREVIEW;
-  // 事件委托靠 dataset.key 找卡片；漏挂这一行会让「展开全部」点了完全没反应。
-  more.dataset.key = group.key;
-  more.classList.toggle('is-open', expanded);
-  more.setAttribute('aria-expanded', String(expanded));
-  more.querySelector('.more-label').textContent = expanded ? '收起' : `展开全部 ${group.count} 个`;
-
+  // v1.5.4 起不做折叠：卡片直接铺满该主机名的全部标签，高度差异交给瀑布流吸收。
   const list = el.querySelector('.pages');
-  const shown = expanded ? group.tabs : group.tabs.slice(0, PREVIEW);
   const frag = document.createDocumentFragment();
-  for (const item of shown) {
+  for (const item of group.tabs) {
     const li = document.createElement('li');
     li.className = 'tab-row';
 
@@ -171,6 +158,67 @@ function updateCard(el, group, multiWindow) {
   list.replaceChildren(frag);
 }
 
+// ---- 瀑布流（v1.5.4）--------------------------------------------------
+// 卡片不再折叠，高度差异很大，等高网格会留大片空白。CSS 多列看着像瀑布流，
+// 但它只能「填满一列再下一列」、不会回填更矮的列，实测最左列会空两百多像素，
+// 所以这里自己按实测高度做贪心分配：每张卡都塞进当前最矮的那一列。
+const FLOW_MIN = 288; // 与 .grid 的 minmax(280px, 1fr) 同一量级
+const FLOW_GAP = 16;  // 与 CSS 的 gap 保持一致
+const FLOW_NARROW = 640;
+
+function flowColumnCount(width) {
+  if (!width) return 1;
+  if (width <= FLOW_NARROW) return 1;
+  return Math.max(1, Math.floor((width + FLOW_GAP) / (FLOW_MIN + FLOW_GAP)));
+}
+
+// 列数不变时复用已有列容器，避免每次 render 都重建 DOM（会打断 hover / focus）。
+function flowColumns(count) {
+  const cols = [...gridEl.children].filter((el) => el.classList.contains('masonry-col'));
+  if (cols.length === count) return cols;
+  const next = Array.from({ length: count }, () => {
+    const col = document.createElement('div');
+    col.className = 'masonry-col';
+    return col;
+  });
+  gridEl.replaceChildren(...next);
+  return next;
+}
+
+function flowCards(groups) {
+  const width = gridEl.clientWidth;
+  if (!width) return; // 隐藏状态下量不到宽度，等可见时的那次 render 再排
+  const cols = flowColumns(flowColumnCount(width));
+  const cards = [];
+  for (const group of groups) {
+    const el = cardEls.get(group.key);
+    if (el) cards.push(el);
+  }
+  // 先把卡片全塞进第一列量一遍：列宽在分配前后是一样的，高度可信；
+  // 这样读高度只触发一次重排（读写分离），而不是每张卡各触发一次。
+  for (const el of cards) cols[0].appendChild(el);
+  const heights = cards.map((el) => el.offsetHeight + FLOW_GAP);
+  const colHeights = cols.map(() => 0);
+  cards.forEach((el, i) => {
+    let target = 0;
+    for (let c = 1; c < colHeights.length; c += 1) {
+      if (colHeights[c] < colHeights[target]) target = c;
+    }
+    cols[target].appendChild(el);
+    colHeights[target] += heights[i];
+  });
+}
+
+// 窗口尺寸变化会改变列数与卡片换行，需要重排；rAF 合帧，避免拖动窗口时抖动。
+let flowFrame = 0;
+window.addEventListener('resize', () => {
+  if (!state.active) return;
+  cancelAnimationFrame(flowFrame);
+  flowFrame = requestAnimationFrame(() => {
+    if (state.active) flowCards(buildGroups(state.items, state.query));
+  });
+});
+
 function render() {
   if (!state.active) return;
   const groups = buildGroups(state.items, state.query);
@@ -187,8 +235,8 @@ function render() {
       cardEls.set(group.key, el);
     }
     updateCard(el, group, multiWindow);
-    gridEl.appendChild(el);
   }
+  flowCards(groups);
 
   emptyEl.hidden = groups.length > 0;
   if (!groups.length) {
@@ -251,12 +299,6 @@ viewEl.addEventListener('click', (e) => {
   if (action === 'tab-focus') {
     e.preventDefault();
     focusTab(Number(id));
-    return;
-  }
-  if (action === 'tabs-expand' && key) {
-    if (state.expanded.has(key)) state.expanded.delete(key);
-    else state.expanded.add(key);
-    render();
     return;
   }
   if (action === 'tabs-close-group' && key) {

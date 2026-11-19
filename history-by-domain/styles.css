@@ -97,6 +97,24 @@ main { padding: 24px 28px 48px; }
   align-items: start;
 }
 
+/* v1.5.4：标签页卡片不再折叠，每张卡高度差被放大，等高网格会留下大片空白，
+   所以标签页侧单用瀑布流。**不用 CSS 多列**：多列只能「填满一列再下一列」，
+   不会回填更矮的列，实测 9 张卡时最左列下方空了两百多像素。
+   改为 flex 等宽列容器 + JS 按实测高度把卡片塞进最矮的一列（tabs-panel.js `flowCards`）。 */
+.masonry {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.masonry > .masonry-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .card {
   min-width: 0;
   padding: 16px;
@@ -903,11 +921,6 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1
 .card--tabs .tab-row:hover .tab-ops,
 .card--tabs .tab-row:focus-within .tab-ops { opacity: 1; pointer-events: auto; }
 .card--tabs .tab-op { width: 24px; height: 24px; padding: 4px; }
-
-/* 「展开全部」= 文字 + 折叠箭头，展开后箭头翻转 */
-.card--tabs .more { display: inline-flex; align-items: center; gap: 4px; }
-.card--tabs .more svg { transition: transform 0.12s ease; }
-.card--tabs .more.is-open svg { transform: rotate(180deg); }
 
 /* 触摸/无 hover 设备上隐形按钮等于不可用，必须常显 */
 @media (hover: none) {
