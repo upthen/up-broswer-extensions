@@ -59,7 +59,7 @@ describe('T-31/T-35 · 分层与安全约束', () => {
     for (const word of [
       '主密码', '解锁', '立即锁定', 'PBKDF2', 'AES-GCM', 'scope', 'pathPrefix',
       'useVault', 'buildImportPreview', 'parseBackup', '转为文档', 'noteToDoc',
-      '导出备份', 'exportBackup', 'v-html', 'marked', 'DOMPurify',
+      '导出备份', 'exportBackup', 'marked', 'DOMPurify',
     ]) {
       expect(ui).not.toContain(word)
     }
@@ -73,14 +73,20 @@ describe('T-31/T-35 · 分层与安全约束', () => {
     expect(core).not.toMatch(/\bchrome\.|\bdocument\.|\bwindow\.|\bconsole\.|\bfetch\(|localStorage/)
   })
 
-  it('v4.1：txt 导入是唯一文件入口，只允许读入、不允许导出 / 下载 / md 渲染', () => {
+  it('v5.1：txt 仍是唯一文件入口；Markdown 只经本地白名单渲染，不允许导出 / 下载', () => {
     const ui = [...walk('src/ui'), ...walk('src/background')]
       .map((f) => f.source)
       .join('\n')
     expect(ui).toContain('type="file"')
     expect(ui).toContain('导入 txt')
     expect(ui).toContain('planImport')
-    for (const word of ['导出', 'download', 'createObjectURL', 'v-html', 'marked', 'markdown-it']) {
+    // v5.2 起没有 v-html：预览只用 renderMarkdown 的转义结果填 innerHTML，
+    // 源码是纯文本域，两个方向都不产生裸 HTML 拼接
+    expect(ui).not.toContain('v-html')
+    expect(ui).toContain("from '../core/markdown'")
+    expect(ui).toContain('renderMarkdown(props.modelValue)')
+    expect(ui).not.toContain('contenteditable')
+    for (const word of ['导出', 'download', 'createObjectURL', 'marked', 'markdown-it']) {
       expect(ui).not.toContain(word)
     }
   })

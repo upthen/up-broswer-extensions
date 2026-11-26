@@ -322,21 +322,31 @@ button,input,textarea{font-family:inherit}
 .detail-ghost{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;opacity:.5}
 .detail-ghost i{display:block;height:74px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm)}
 .detail-ghost i:nth-child(3n){height:96px}
-.detail-veil{position:absolute;inset:0;background:rgba(27,36,48,.34);display:grid;place-items:center;padding:var(--sp-4)}
-.detail{width:min(460px,100%);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);padding:var(--sp-5);animation:detailIn var(--dur-slow) var(--ease) both}
-@keyframes detailIn{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
-.detail__head{display:flex;align-items:center;gap:8px;margin-bottom:var(--sp-3)}
-.detail__head b{font-size:var(--fs-sm);font-weight:650}
+.detail-veil{position:absolute;inset:0;background:rgba(27,36,48,.18);display:flex;align-items:flex-end}
+.detail{display:flex;flex-direction:column;width:100%;height:50%;max-height:calc(100% - 16px);overflow:hidden;background:var(--surface);border-top:1px solid var(--border-strong);border-radius:var(--r-lg) var(--r-lg) 0 0;box-shadow:0 -12px 32px rgba(27,36,48,.12);animation:sheetIn var(--dur-slow) var(--ease) both;padding:10px max(var(--sp-5),calc((100% - 720px)/2)) var(--sp-4)}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.detail__grip{flex:none;display:flex;align-items:center;justify-content:center;height:16px;margin:-4px 0 6px;cursor:grab;touch-action:none}
+.detail__grip::before{content:'';width:36px;height:4px;border-radius:999px;background:var(--border-strong)}
+.detail__grip:hover::before{background:var(--muted)}
+.detail__head{flex:none;display:flex;align-items:center;gap:2px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);cursor:grab;touch-action:none}
 .detail__head .sp{flex:1}
-.detail__head span{font-size:var(--fs-micro);color:var(--muted)}
-.detail__title{width:100%;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;padding:2px 0 9px;font-size:var(--fs-md);font-weight:650;color:var(--text)}
-.detail__title:focus{outline:none;border-bottom-color:var(--accent)}
-.detail__body{display:block;width:100%;min-height:116px;margin-top:10px;resize:vertical;font-family:var(--font-mono);font-size:12px;line-height:1.8;color:var(--text-2);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:9px 11px;white-space:pre-wrap}
-.detail__body:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);background:var(--surface)}
-.detail__foot{display:flex;align-items:center;gap:6px;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)}
-.detail__foot .t{display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-micro);color:var(--muted)}
-.detail__foot .sp{flex:1}
-.detail__foot .btn{height:30px;font-size:var(--fs-xs)}
+/* macOS 式窗口按钮：静止是三色圆点，整组悬停才浮出 × − + */
+.detail__lights{flex:none;display:flex;align-items:center;gap:8px;margin-right:12px;padding-right:12px;border-right:1px solid var(--border)}
+.detail__light{position:relative;width:12px;height:12px;flex:none;padding:0;border:0;border-radius:50%;cursor:default;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.14)}
+.detail__light::after{content:'';position:absolute;inset:0;display:grid;place-items:center;font-family:var(--font-mono);font-size:9px;font-weight:700;line-height:1;color:rgba(0,0,0,.62);opacity:0}
+.detail__light--close{background:#ff5f57}
+.detail__light--min{background:#febc2e}
+.detail__light--max{background:#28c840}
+.detail__light--close::after{content:'×'}
+.detail__light--min::after{content:'−'}
+.detail__light--max::after{content:'+'}
+.detail__lights:hover .detail__light::after{opacity:1}
+.detail__restore{margin-left:10px;font-size:var(--fs-micro);color:var(--muted);white-space:nowrap}
+.detail__meta{font-size:var(--fs-micro);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail__title{flex:none;width:100%;border:0;background:transparent;margin:2px 0 0;padding:0;font-size:var(--fs-xl);font-weight:650;letter-spacing:-.4px;line-height:1.35;color:var(--text)}
+.detail__title:focus{outline:none}
+.detail__body{display:block;width:100%;flex:1 1 auto;min-height:60px;margin-top:16px;padding:0;border:0;outline:0;resize:none;overflow:auto;background:transparent;font-family:var(--font-mono);font-size:13px;line-height:1.9;color:var(--text-2);white-space:pre-wrap}
+.detail__body::placeholder{color:var(--muted)}
 
 /* 危险说明 + 清空（保留在便签模块底部） */
 .app-footer{margin-top:var(--sp-4);padding:var(--sp-3) 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:var(--sp-2)}
@@ -900,23 +910,18 @@ mark{background:var(--highlight);color:var(--highlight-ink);border-radius:3px;pa
       <div class="resp-item"><div class="resp-item__head"><b>4 列</b><span>≥ 1100px · 全屏</span></div><div class="resp-grid resp-grid--4"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>约 275px / 张；8 张两行铺满，一眼扫完，留白舒适。</p></div>
     </div>
 
-    <div class="subhead">点击卡片后的编辑态 <span>详情浮层 · 静态示例</span></div>
+    <div class="subhead">点击卡片后的编辑态 <span>底部抽屉 · 可拖拽改高 · 静态示例</span></div>
     <div class="detail-stage">
       <div class="detail-ghost"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="detail-veil">
         <div class="detail">
-          <div class="detail__head"><svg class="ic ic--sm" style="color:var(--accent)"><use href="#i-stickies"/></svg><b>编辑便签</b><span class="sp"></span><span>输入即存 · 无保存按钮</span><button class="btn btn--bare btn--icon" type="button" title="关闭" style="height:24px;width:24px"><svg class="ic ic--sm"><use href="#i-close"/></svg></button></div>
+          <div class="detail__grip" title="拖动调整高度 · 双击在 50% / 80% 之间切换"></div>
+          <div class="detail__head"><span class="detail__lights"><span class="detail__light detail__light--close"></span><span class="detail__light detail__light--min"></span><span class="detail__light detail__light--max"></span></span><span class="detail__meta">42 字 · 更新 11-13 14:32</span><span class="sp"></span><button class="btn btn--bare btn--icon" type="button" title="复制全文" style="height:28px;width:28px"><svg class="ic ic--sm"><use href="#i-copy"/></svg></button><button class="btn btn--bare btn--icon" type="button" title="复制密码" style="height:28px;width:28px;color:var(--accent)"><svg class="ic ic--sm"><use href="#i-key"/></svg></button><button class="btn btn--bare btn--icon" type="button" title="删除便签" style="height:28px;width:28px;color:var(--danger)"><svg class="ic ic--sm"><use href="#i-trash"/></svg></button><button class="btn btn--primary" type="button" style="height:28px;font-size:12px;padding:0 10px">完成</button></div>
           <input class="detail__title" type="text" value="pyxis" placeholder="标题（留空自动取正文首行）" />
           <textarea class="detail__body" spellcheck="false">地址： https://pyxis.internal.dev
 账号： ops_admin
 密码： Poc@Meta_0•••
 备注： 控制台入口，跳板机网段可访问</textarea>
-          <div class="detail__foot">
-            <span class="t"><svg class="ic" style="width:12px;height:12px"><use href="#i-clock"/></svg>更新 11-13 14:32</span><span class="sp"></span>
-            <button class="btn" type="button"><svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文</button>
-            <button class="btn btn--accent" type="button"><svg class="ic ic--sm"><use href="#i-key"/></svg>复制密码</button>
-            <button class="btn btn--danger" type="button"><svg class="ic ic--sm"><use href="#i-trash"/></svg>删除</button>
-          </div>
         </div>
       </div>
     </div>
@@ -928,7 +933,7 @@ mark{background:var(--highlight);color:var(--highlight-ink);border-radius:3px;pa
       <div class="sec-head__no">03</div>
       <div class="sec-head__txt">
         <h2 class="sec-head__title">记事本模块 <span>整页都是编辑器</span></h2>
-        <p class="sec-head__desc">文件列表（当前项高亮 / 新建 / 删除）+ 占据剩余全部宽高的书写区；纯白无边框，顶部只有极轻工具条，不用卡片把编辑区框起来。</p>
+        <p class="sec-head__desc">文件列表（当前项高亮 / 新建 / 删除）+ 占据剩余全部宽高的书写区；纯白无边框，顶部只有极轻工具条，不用卡片把编辑区框起来。v5.2 起是左源码 / 右预览的分栏编辑，工具条右侧有「分栏 / 源码 / 预览」三档；本页静态稿画的是其中右侧预览的排版。</p>
       </div>
       <span class="pill">示意数据 · 4 篇文档</span>
     </div>

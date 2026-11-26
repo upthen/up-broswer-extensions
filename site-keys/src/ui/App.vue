@@ -4,6 +4,7 @@ import { createWorkspaceController } from './composables/useWorkspace'
 import { copyText } from './composables/useClipboard'
 import { countChars, excerpt, extractPassword, searchEntries } from '../core/workspace'
 import { MAX_IMPORT_BYTES, TXT_ACCEPT, planImport } from '../core/textFile'
+import MarkdownEditor from './MarkdownEditor.vue'
 import { SELECTION_SIGNAL_KEY } from '../core/selection'
 import type { SelectionSignal } from '../core/selection'
 import type { ImportSource } from '../core/textFile'
@@ -26,13 +27,207 @@ const detailId = ref<string | null>(null)
 const docDropdown = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
+/* ---------------- 便签详情：底部抽屉 ---------------- */
+/** 初始 / 上限 / 下限都按视口高度的比例给，再叠绝对值保底，避免矮窗口下正文被压没。 */
+const SHEET_INIT_RATIO = 0.5
+const SHEET_MAX_RATIO = 0.8
+const SHEET_MIN_RATIO = 0.3
+const SHEET_MIN_PX = 200
+const SHEET_GAP_PX = 16
+/** 位移超过 4px 才算拖拽，否则仍然是一次点击。 */
+const DRAG_THRESHOLD_PX = 4
+/** 拖拽收尾的静默窗口：兜住 pointercancel、指针捕获丢失与浏览器补发的 click。 */
+const VEIL_CLICK_GUARD_MS = 250
+const CLOSE_MS = 160
+/** 黄灯收起后只剩标题栏，这个高度刚好放下一行窗口按钮。 */
+const SHEET_COLLAPSED_PX = 54
+/** 侧栏与全屏页宽度差太多，高度记忆分开存，互不污染。 */
+const SHEET_STORE_KEY = /sidepanel\.html$/.test(location.pathname) ? 'sticky.sheet.h.panel' : 'sticky.sheet.h.page'
+
+const sheetH = ref(0)
+const sheetDragging = ref(false)
+const closing = ref(false)
+const sheetMinimized = ref(false)
+/** 收起前的高度只存在内存里：下次打开仍按记忆高度，细条高度不写盘。 */
+let heightBeforeMinimize = 0
+const sheetStyle = computed(() => (sheetH.value ? { height: `${sheetH.value}px` } : {}))
+
+let dragFromY = 0
+let dragFromH = 0
+let dragPointer: number | null = null
+let dragMoved = false
+let dragEndedAt = 0
+
+function sheetMinPx(): number {
+  return Math.max(window.innerHeight * SHEET_MIN_RATIO, SHEET_MIN_PX)
+}
+function sheetMaxPx(): number {
+  // 上限同时受 80% 与「视口减一条缝」约束；视口极小的时候两者可能打架，取大者兜底
+  return Math.max(sheetMinPx(), Math.min(window.innerHeight * SHEET_MAX_RATIO, window.innerHeight - SHEET_GAP_PX))
+}
+function clampSheet(h: number): number {
+  return Math.round(Math.min(Math.max(h, sheetMinPx()), sheetMaxPx()))
+}
+function loadSheetH(): number {
+  try {
+    const saved = Number(window.localStorage?.getItem(SHEET_STORE_KEY))
+    if (Number.isFinite(saved) && saved > 0) return clampSheet(saved)
+  } catch {
+    // 隐私模式 / 配额受限时读不到就退回默认高度，不影响打开抽屉
+  }
+  return clampSheet(window.innerHeight * SHEET_INIT_RATIO)
+}
+function saveSheetH(): void {
+  try {
+    window.localStorage?.setItem(SHEET_STORE_KEY, String(Math.round(sheetH.value)))
+  } catch {
+    // 记忆高度只是体验优化，写不进去就算了
+  }
+}
+
+/** 把手条与头部共用一套拖拽：向下减高、向上增高，松手即停在当前位置。 */
+function beginDrag(event: PointerEvent): void {
+  if (closing.value || sheetMinimized.value || event.button !== 0) return
+  // 头部里的按钮不参与拖拽，否则点「关闭」会被当成起手
+  const target = event.target as HTMLElement | null
+  if (target?.closest('button, input, textarea, a, select')) return
+  const handle = event.currentTarget as HTMLElement
+  try {
+    handle.setPointerCapture?.(event.pointerId)
+  } catch {
+    // 指针已失效时捕获会抛 NotFoundError；这时退化成普通事件流，拖拽仍可用
+  }
+  dragPointer = event.pointerId
+  dragFromY = event.clientY
+  dragFromH = sheetH.value
+  dragMoved = false
+  sheetDragging.value = true
+  // 鼠标不能 preventDefault：那会把 dblclick 一起吞掉，双击归位就失效了；
+  // 触摸 / 触控笔则要挡掉合成 click，靠 touch-action:none + preventDefault 双保险。
+  if (event.pointerType !== 'mouse') event.preventDefault()
+}
+function moveDrag(event: PointerEvent): void {
+  if (dragPointer === null || event.pointerId !== dragPointer) return
+  const delta = dragFromY - event.clientY
+  if (!dragMoved && Math.abs(delta) < DRAG_THRESHOLD_PX) return
+  dragMoved = true
+  sheetH.value = clampSheet(dragFromH + delta)
+}
+function endDrag(event: PointerEvent): void {
+  if (dragPointer === null || event.pointerId !== dragPointer) return
+  const handle = event.currentTarget as HTMLElement
+  try {
+    if (handle.hasPointerCapture?.(event.pointerId)) handle.releasePointerCapture(event.pointerId)
+  } catch {
+    // 捕获已自然释放，无需处理
+  }
+  dragPointer = null
+  sheetDragging.value = false
+  if (dragMoved) {
+    // 真正拖过才记时间点：遮罩紧接着收到的 click 一律不算关闭意图
+    dragEndedAt = Date.now()
+    saveSheetH()
+  }
+  dragMoved = false
+}
+/** 双击把手在「初始 50%」与「上限 80%」之间归位，避免用手拖不准。 */
+function toggleSheetHeight(): void {
+  if (closing.value) return
+  const pivot = (sheetMinPx() + sheetMaxPx()) / 2
+  const target = sheetH.value > pivot ? SHEET_INIT_RATIO : SHEET_MAX_RATIO
+  sheetH.value = clampSheet(window.innerHeight * target)
+  saveSheetH()
+}
+/** 黄灯：收起成底部细条；再按一次、点细条或点绿灯都可展开。 */
+function minimizeSheet(): void {
+  if (closing.value) return
+  if (sheetMinimized.value) { restoreSheet(); return }
+  flushWrites()
+  heightBeforeMinimize = sheetH.value
+  sheetMinimized.value = true
+  sheetH.value = SHEET_COLLAPSED_PX
+}
+function restoreSheet(): void {
+  if (!sheetMinimized.value) return
+  sheetMinimized.value = false
+  sheetH.value = clampSheet(heightBeforeMinimize || window.innerHeight * SHEET_INIT_RATIO)
+}
+/** 绿灯：已收起时展开并直接放大；展开时在 50% / 80% 间切换。 */
+function maximizeSheet(): void {
+  if (closing.value) return
+  if (sheetMinimized.value) {
+    restoreSheet()
+    sheetH.value = clampSheet(window.innerHeight * SHEET_MAX_RATIO)
+    saveSheetH()
+    return
+  }
+  toggleSheetHeight()
+}
+function onHeadClick(): void {
+  if (!sheetMinimized.value) return
+  // 刚拖完的那一瞬不把「松手」当成展开意图，和遮罩共用同一道闸
+  if (dragPointer !== null || Date.now() - dragEndedAt < VEIL_CLICK_GUARD_MS) return
+  restoreSheet()
+}
+function onVeilClick(): void {
+  // 拖拽中、或拖拽刚松手（指针飘出抽屉落在遮罩上）都不算点击遮罩
+  if (dragPointer !== null || Date.now() - dragEndedAt < VEIL_CLICK_GUARD_MS) return
+  closeDetail()
+}
+function onViewportResize(): void {
+  // 收起的细条不受 30% 下限约束，别在窗口缩放时被弹回正常高度
+  if (detailId.value && !sheetMinimized.value) sheetH.value = clampSheet(sheetH.value)
+}
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key !== 'Escape' || !detailId.value) return
+  // 中文输入法组字时按 Esc 是取消候选词，不能顺手把抽屉关掉
+  if (event.isComposing || event.keyCode === 229) return
+  event.preventDefault()
+  closeDetail()
+}
+
 const emptyEntry = (): Note => ({ id: '', title: '', content: '', createdAt: 0, updatedAt: 0 })
 /** 详情浮层与编辑器始终绑定非空对象，避免可空值打断 v-model。 */
 const draft = ref<Note>(emptyEntry())
 const docDraft = ref<Doc>(emptyEntry())
 
+/* ---------------- 记事本视图：分栏 / 源码 / 预览 ---------------- */
+type DocView = 'split' | 'source' | 'preview'
+const DOC_VIEW_KEY = 'sticky.doc.view'
+const docView = ref<DocView>('split')
+
+function readDocView(): DocView {
+  try {
+    const saved = window.localStorage?.getItem(DOC_VIEW_KEY)
+    if (saved === 'split' || saved === 'source' || saved === 'preview') return saved
+    // v5.1 存的是所见即所得的 wys，按语义回到分栏（左源码右预览）
+    if (saved === 'wys') return 'split'
+    if (saved === 'edit') return 'source'
+  } catch {
+    // 隐私模式读不到就用默认档
+  }
+  return 'split'
+}
+function setDocView(view: DocView): void {
+  if (view === docView.value) return
+  flushWrites()
+  docView.value = view
+  try {
+    window.localStorage?.setItem(DOC_VIEW_KEY, view)
+  } catch {
+    // 视图偏好只是体验优化，存不进去不影响渲染
+  }
+}
+/** 源码档改动直接回写；分栏档由 MarkdownEditor 从文本域抛上来。 */
+function onEditorInput(value: string): void {
+  docDraft.value.content = value
+  onDocInput()
+}
+
 const shown = computed<Note[]>(() => searchEntries(notes.value, query.value))
 const hasDoc = computed(() => docs.value.some((doc) => doc.id === activeDocId.value))
+/** 正文自带一级标题时不再显示标题输入框，避免同一句话上下各出现一次。 */
+const headingTitle = computed(() => firstHeading(docDraft.value.content))
 
 function flash(message: string): void {
   toast.value = message
@@ -103,8 +298,19 @@ function onDraftInput(): void {
 function onDocInput(): void {
   const doc = docDraft.value
   if (!doc.id) return
+  // 正文首行是一级标题时，它就是这篇的标题：写回 doc.title，
+  // 否则侧栏列表、顶栏和正文会各说各话，看着像两个标题
+  const heading = firstHeading(doc.content)
+  if (heading) doc.title = heading
   const snapshot = { title: doc.title, content: doc.content }
   queueWrite(`doc:${doc.id}`, () => controller.updateDoc(doc.id, snapshot))
+}
+
+/** 取正文首个非空行的 `# 标题` 文本；没有就是空串。 */
+function firstHeading(content: string): string {
+  const first = content.split('\n').find((line) => line.trim())
+  if (!first) return ''
+  return /^#\s+(.+?)\s*#*\s*$/.exec(first.trim())?.[1] ?? ''
 }
 
 function syncDocDraft(): void {
@@ -149,9 +355,12 @@ async function onSelectionSignal(signal: SelectionSignal): Promise<void> {
 }
 
 onMounted(() => {
+  docView.value = readDocView()
   // 页面被隐藏 / 关闭前把还没到点的输入立刻排进写入队列。
   window.addEventListener('pagehide', flushWrites)
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushWrites() })
+  window.addEventListener('resize', onViewportResize)
+  window.addEventListener('keydown', onKeydown)
   const onChanged = typeof chrome !== 'undefined' && !!chrome.storage?.local
     ? chrome.storage.onChanged
     : undefined
@@ -189,12 +398,27 @@ function openDetailById(id: string): void {
   const found = notes.value.find((n) => n.id === id)
   if (!found) return
   draft.value = found
+  closing.value = false
+  sheetMinimized.value = false
+  heightBeforeMinimize = 0
+  sheetH.value = loadSheetH()
   detailId.value = id
   menuId.value = null
   void nextTick(() => { document.getElementById('detail-title')?.focus() })
 }
 function openDetail(note: Note): void { openDetailById(note.id) }
-function closeDetail(): void { flushWrites(); detailId.value = null }
+/** 关闭先落盘、再播 160ms 下滑动画；期间锁住重复关闭。 */
+function closeDetail(): void {
+  if (closing.value) return
+  flushWrites()
+  closing.value = true
+  sheetMinimized.value = false
+  heightBeforeMinimize = 0
+  window.setTimeout(() => {
+    detailId.value = null
+    closing.value = false
+  }, CLOSE_MS)
+}
 function toggleMenu(id: string): void { menuId.value = menuId.value === id ? null : id }
 
 async function removeNote(note: Note): Promise<void> {
@@ -203,7 +427,7 @@ async function removeNote(note: Note): Promise<void> {
   try {
     await runAction(() => controller.removeNote(note.id))
     notes.value = notes.value.filter((n) => n.id !== note.id)
-    if (detailId.value === note.id) detailId.value = null
+    if (detailId.value === note.id) { detailId.value = null; closing.value = false }
     menuId.value = null
     flash('已删除')
   } catch (e) { fail(e) }
@@ -217,6 +441,7 @@ async function clearAll(): Promise<void> {
     notes.value = []
     query.value = ''
     detailId.value = null
+    closing.value = false
     flash('已清空便签')
   } catch (e) { fail(e) }
 }
@@ -507,20 +732,29 @@ function formatTime(ts: number): string {
             <span class="editor__sep"/>
             <span class="editor__meta">{{ countChars(docDraft.content) }} 字 · 更新 {{ formatTime(docDraft.updatedAt) }}</span>
             <span class="sp"/>
+            <div class="seg seg--sm editor__view" role="group" aria-label="视图">
+              <button class="seg__item" :class="{ 'is-active': docView === 'split' }" type="button" title="左边源码，右边实时预览" @click="setDocView('split')">分栏</button>
+              <button class="seg__item" :class="{ 'is-active': docView === 'source' }" type="button" title="只看 Markdown 源码" @click="setDocView('source')">源码</button>
+              <button class="seg__item" :class="{ 'is-active': docView === 'preview' }" type="button" title="只看排版效果" @click="setDocView('preview')">预览</button>
+            </div>
             <button class="btn" type="button" @click="copyCurrentDoc">
               <svg class="ic ic--sm"><use href="#i-copy"/></svg>复制全文
             </button>
           </div>
-          <div v-if="hasDoc" class="editor__page">
-            <input
-              id="editor-title" v-model="docDraft.title" class="editor__title"
-              type="text" placeholder="文档标题" @input="onDocInput" @blur="flushWrites"
-            />
-            <textarea
-              v-model="docDraft.content" class="editor__body"
-              placeholder="随便写：方案、命令、临时笔记… 输入即自动保存"
-              spellcheck="false" @input="onDocInput" @blur="flushWrites"
-            />
+          <div v-if="hasDoc" class="editor__page" :class="`is-${docView}`">
+            <div class="editor__pane editor__pane--write">
+              <input
+                v-if="!headingTitle" id="editor-title" v-model="docDraft.title" class="editor__title"
+                type="text" placeholder="文档标题" @input="onDocInput" @blur="flushWrites"
+              />
+              <MarkdownEditor
+                :model-value="docDraft.content"
+                :view="docView"
+                placeholder="随便写：方案、命令、临时笔记… 支持 Markdown，右边实时看效果"
+                @update:model-value="onEditorInput"
+                @flush="flushWrites"
+              />
+            </div>
           </div>
           <div v-else class="empty">
             <svg class="ic"><use href="#i-doc"/></svg>
@@ -532,14 +766,52 @@ function formatTime(ts: number): string {
       </div>
     </template>
 
-    <!-- ============ 便签详情浮层：点开才编辑 ============ -->
-    <div v-if="detailId" class="detail-veil" @click.self="closeDetail">
-      <div class="detail">
-        <div class="detail__head">
-          <b>编辑便签</b><span class="sp"/><span>输入即存</span>
-          <button class="btn btn--bare btn--icon" type="button" title="关闭" @click="closeDetail">
-            <svg class="ic"><use href="#i-close"/></svg>
-          </button>
+    <!-- ============ 便签详情：底部抽屉，可上下拖拽调高 ============ -->
+    <div v-if="detailId" class="detail-veil" @click.self="onVeilClick">
+      <div
+        class="detail"
+        :class="{ 'is-dragging': sheetDragging, 'is-closing': closing, 'is-minimized': sheetMinimized }"
+        :style="sheetStyle"
+        role="dialog" aria-modal="true" aria-label="编辑便签"
+      >
+        <div
+          class="detail__grip" title="拖动调整高度 · 双击在 50% / 80% 之间切换"
+          @pointerdown="beginDrag" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag"
+          @dblclick="toggleSheetHeight"
+        ></div>
+        <div
+          class="detail__head"
+          @click="onHeadClick"
+          @pointerdown="beginDrag" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag"
+        >
+          <div class="detail__lights" role="group" aria-label="窗口控制">
+            <button class="detail__light detail__light--close" type="button" title="关闭" aria-label="关闭" @click.stop="closeDetail"></button>
+            <button
+              class="detail__light detail__light--min" type="button"
+              :title="sheetMinimized ? '展开便签' : '收起便签'" :aria-label="sheetMinimized ? '展开便签' : '收起便签'"
+              @click.stop="minimizeSheet"
+            ></button>
+            <button
+              class="detail__light detail__light--max" type="button"
+              :title="sheetMinimized ? '展开并最大化' : '最大化 / 还原'" :aria-label="sheetMinimized ? '展开并最大化' : '最大化 / 还原'"
+              @click.stop="maximizeSheet"
+            ></button>
+          </div>
+          <span v-if="sheetMinimized" class="detail__restore">便签已收起 · 点这里展开</span>
+          <span class="detail__meta">{{ countChars(draft.content) }} 字 · {{ formatTime(draft.updatedAt) }}</span>
+          <template v-if="!sheetMinimized">
+            <span class="sp"/>
+            <button class="btn btn--bare btn--icon" type="button" title="复制全文" @click="copyAll(draft)">
+              <svg class="ic"><use href="#i-copy"/></svg>
+            </button>
+            <button v-if="extractPassword(draft.content)" class="btn btn--bare btn--icon detail__act--key" type="button" title="复制密码" @click="copyPassword(draft)">
+              <svg class="ic"><use href="#i-key"/></svg>
+            </button>
+            <button class="btn btn--bare btn--icon detail__act--danger" type="button" title="删除便签" @click="removeNote(draft)">
+              <svg class="ic"><use href="#i-trash"/></svg>
+            </button>
+            <button class="btn btn--primary btn--sm" type="button" @click="closeDetail">完成</button>
+          </template>
         </div>
         <input
           id="detail-title" v-model="draft.title" class="detail__title"
@@ -550,14 +822,6 @@ function formatTime(ts: number): string {
           placeholder="随便写：地址、账号、密码、命令、临时笔记… 输入即自动保存"
           spellcheck="false" @input="onDraftInput" @blur="flushWrites"
         />
-        <div class="detail__foot">
-          <span class="t"><svg class="ic ic--sm"><use href="#i-clock"/></svg>{{ formatTime(draft.updatedAt) }}</span>
-          <span class="sp"/>
-          <button class="btn" type="button" @click="copyAll(draft)">复制全文</button>
-          <button v-if="extractPassword(draft.content)" class="btn btn--accent" type="button" @click="copyPassword(draft)">复制密码</button>
-          <button class="btn btn--danger" type="button" @click="removeNote(draft)">删除</button>
-          <button class="btn btn--primary" type="button" @click="closeDetail">完成</button>
-        </div>
       </div>
     </div>
 

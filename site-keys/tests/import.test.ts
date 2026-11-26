@@ -251,8 +251,13 @@ describe('T-38 · UI / 权限守卫', () => {
     expect(css).not.toMatch(/url\(\s*['"]?https?:/)
   })
 
-  it('只收 txt、不渲染 md、不写日志、不做导出备份', () => {
-    for (const word of ['v-html', 'marked', 'markdown-it', 'DOMPurify', '导出备份', 'download', 'console.']) {
+  it('只收 txt、Markdown 走本地白名单渲染器、不写日志、不做导出备份', () => {
+    // v5.2 起记事本回到分栏编辑：预览由 MarkdownEditor 用 renderMarkdown 填，
+    // 不再有任何 v-html 指令
+    expect(app).not.toContain('v-html')
+    expect(app).toContain('MarkdownEditor')
+    // 仍然不允许引第三方解析 / 消毒库，也不做任何导出下载
+    for (const word of ['marked', 'markdown-it', 'DOMPurify', '导出备份', 'download', 'console.']) {
       expect(app).not.toContain(word)
     }
   })

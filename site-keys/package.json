@@ -1,8 +1,8 @@
 {
   "name": "site-keys",
   "private": true,
-  "version": "0.4.3",
-  "description": "便签本 Sticky — 便签网格 + 整页记事本双模块，支持导入 txt，打开就填、输入即存的纯本地 MV3 扩展",
+  "version": "0.5.2",
+  "description": "便签本 Sticky — 便签网格 + 整页记事本双模块，支持导入 txt 与 Markdown 左源码 / 右预览编辑，打开就填、输入即存的纯本地 MV3 扩展",
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
@@ -20,6 +20,7 @@
     "@types/chrome": "^0.3.7",
     "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.10",
+    "happy-dom": "^21.0.4",
     "typescript": "^6.0.3",
     "vite": "^8.3.5",
     "vitest": "^5.1.0",

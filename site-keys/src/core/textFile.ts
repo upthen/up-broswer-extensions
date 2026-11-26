@@ -1,14 +1,14 @@
 /**
  * SPEC v4.1 §8：记事本导入 txt 的纯逻辑。
  * 只处理字节、文件名与导入计划，不碰浏览器扩展 API / DOM / 网络 / 控制台，可完整单测。
- * 设计边界：一个 txt → 一篇新文档；不追加、不覆盖、不改写正文、不做 md 渲染。
+ * 设计边界：一个 txt → 一篇新文档；不追加、不覆盖、不改写正文。
  */
 
 /** 单个文件上限 1 MiB：storage.local 默认配额约 10 MB，且每次输入会序列化全库。 */
 export const MAX_IMPORT_BYTES = 1024 * 1024
 /** 一次最多导入 20 个文件，避免一次写入把配额打满。 */
 export const MAX_IMPORT_FILES = 20
-/** 文件选择器只收纯文本；明确不含 .md，本版不引入 Markdown 解析与 v-html。 */
+/** 文件选择器只收纯文本：`.md` 走编辑器里的粘贴 / 手写，不单独开一个文件入口。 */
 export const TXT_ACCEPT = '.txt,text/plain'
 
 export const SKIP_REASON = {

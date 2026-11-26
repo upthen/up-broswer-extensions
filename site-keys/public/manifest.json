@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "便签本 · Sticky",
-  "version": "0.4.3",
-  "description": "便签小卡片网格 + 整页记事本编辑器，支持导入本地 txt，打开就填、输入即存。纯本地明文，不联网、不同步。",
+  "version": "0.5.2",
+  "description": "便签小卡片网格 + 整页记事本编辑器，支持导入本地 txt、Markdown 左源码 / 右预览编辑，打开就填、输入即存。纯本地明文，不联网、不同步。",
   "minimum_chrome_version": "114",
   "permissions": ["storage", "sidePanel", "unlimitedStorage", "contextMenus"],
   "host_permissions": [],
